@@ -2,65 +2,100 @@
 
 {% block title %}首頁 - 社群網站{% endblock %}
 
+{% block extra_head %}
+{{ form.media }}
+<style>
+  /* 手機版：用包裝層提高選擇性，不使用 !important */
+  @media (max-width: 767px) {
+    .ckeditor-responsive .cke_chrome,
+    .ckeditor-responsive .cke_inner {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-8">
+<div class="mx-auto w-full max-w-3xl">
     {% if user.is_authenticated %}
-    <div class="card shadow-sm mb-4">
-      <div class="card-body">
-        <form action="{% url 'posts:post_create' %}" method="post" class="mb-0">
+    <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
+        <form action="{% url 'posts:feed' %}" method="post" enctype="multipart/form-data">
           {% csrf_token %}
-          <textarea name="content" class="form-control mb-2" rows="3" placeholder="分享新鮮事..." required></textarea>
-          <button type="submit" class="btn btn-primary">發佈</button>
+          {% if form.non_field_errors %}
+          <div class="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{{ form.non_field_errors }}</div>
+          {% endif %}
+          <div class="mb-3 min-w-0">
+            <label class="mb-1 block text-sm font-medium text-slate-600">內容（可調字級、顏色、插入圖片）</label>
+            <div class="ckeditor-responsive w-full max-w-full min-w-0 overflow-x-auto">
+              {{ form.content }}
+            </div>
+            {% if form.content.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.content.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="mb-4">
+            <label for="{{ form.image.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">附加封面圖（選填）</label>
+            {{ form.image }}
+            {% if form.image.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.image.errors.0 }}</p>{% endif %}
+          </div>
+          <button type="submit" class="min-h-11 w-full rounded-lg bg-sky-400 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-600 sm:w-auto">發佈</button>
         </form>
-      </div>
     </div>
     {% endif %}
 
-    <div id="feed-list">
+    <div id="feed-list" class="space-y-3 sm:space-y-4">
       {% for post in posts %}
-      <article class="card shadow-sm mb-3" data-post-id="{{ post.pk }}">
-        <div class="card-body">
-          <div class="d-flex align-items-center mb-2">
-            <span class="fw-bold">{{ post.author.username }}</span>
-            <span class="text-muted ms-2 small">{{ post.created_at|timesince }} 前</span>
+      <article class="rounded-xl bg-white p-4 shadow sm:p-5" data-post-id="{{ post.pk }}">
+          <div class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span class="font-semibold">{{ post.author.username }}</span>
+            <span class="text-sm text-slate-500">{{ post.created_at|timesince }} 前</span>
           </div>
-          <p class="card-text mb-2">{{ post.content|linebreaksbr }}</p>
+          <div class="post-body mb-2 max-w-full overflow-x-auto leading-relaxed break-words [&_img]:my-2 [&_img]:max-h-[min(400px,60vh)] [&_img]:max-w-full [&_img]:rounded-lg [&_img]:object-contain [&_p]:mb-2 [&_table]:max-w-full [&_table]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
+            {{ post.content|safe }}
+          </div>
           {% if post.image %}
-          <img src="{{ post.image.url }}" alt="" class="img-fluid rounded mb-2" style="max-height: 400px; object-fit: cover;">
+          <img src="{{ post.image.url }}" alt="" class="mb-2 w-full max-h-[min(400px,60vh)] rounded-lg object-cover">
           {% endif %}
-          <div class="d-flex align-items-center text-muted small">
-            <span class="me-3">{{ post.likes.count }} 個讚</span>
+          <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+            <span>{{ post.likes.count }} 個讚</span>
             <span>{{ post.comments.count }} 則留言</span>
           </div>
           {% if user.is_authenticated %}
-          <div class="mt-2">
-            <a href="{% url 'posts:like_toggle' post.pk %}" class="btn btn-outline-danger btn-sm">讚</a>
+          <div class="mt-3">
+            <a href="{% url 'posts:like_toggle' post.pk %}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 active:bg-rose-50 hover:bg-rose-50">讚</a>
           </div>
-          <hr>
-          <div class="comments">
+          <hr class="my-4 border-slate-200">
+          <div x-data="{ expanded: false }">
             {% for comment in post.comments.all %}
-            <p class="small mb-1"><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
+            <p
+              class="mb-2 break-words text-sm sm:mb-1"
+              x-bind:class="(!expanded && {{ forloop.counter }} > 3) ? 'hidden' : ''"
+            ><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
+            {% empty %}
+            <p class="text-sm text-slate-400">還沒有留言</p>
             {% endfor %}
-            <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-2">
+            {% if post.comments.count > 3 %}
+            <button
+              type="button"
+              class="mt-1 min-h-11 w-full rounded-lg py-2 text-left text-sm font-medium text-sky-600 hover:bg-sky-50 sm:w-auto sm:px-2"
+              @click="expanded = !expanded"
+              x-text="expanded ? '收合留言' : '查看更多（還有 {{ post.comments.count|add:'-3' }} 則）'"
+            ></button>
+            {% endif %}
+            <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-3">
               {% csrf_token %}
-              <div class="input-group input-group-sm">
-                <input type="text" name="content" class="form-control" placeholder="留言..." required>
-                <button type="submit" class="btn btn-outline-primary">送出</button>
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                <input type="text" name="content" class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" placeholder="留言..." required autocomplete="off">
+                <button type="submit" class="min-h-11 w-full shrink-0 rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-600 active:bg-sky-50 hover:bg-sky-50 sm:w-auto">送出</button>
               </div>
             </form>
           </div>
           {% endif %}
-        </div>
       </article>
       {% empty %}
-      <div class="card shadow-sm">
-        <div class="card-body text-center text-muted py-5">
-          <p class="mb-0">尚無貼文，{% if user.is_authenticated %}來發第一篇吧！{% else %}登入後即可發文與互動。{% endif %}</p>
-        </div>
+      <div class="rounded-xl bg-white px-6 py-10 text-center text-slate-500 shadow sm:px-10 sm:py-12">
+          <p class="text-sm sm:text-base">尚無貼文，{% if user.is_authenticated %}來發第一篇吧！{% else %}登入後即可發文與互動。{% endif %}</p>
       </div>
       {% endfor %}
     </div>
-  </div>
 </div>
 {% endblock %}

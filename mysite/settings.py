@@ -34,6 +34,9 @@ INSTALLED_APPS = [
     "polls.apps.PollsConfig",  # 典型的 Django 应用配置
     "accounts.apps.AccountsConfig",
     "posts.apps.PostsConfig",
+    "js_asset",
+    "ckeditor",
+    "ckeditor_uploader",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -57,7 +60,7 @@ ROOT_URLCONF = 'mysite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "templates"],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -88,9 +91,6 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
@@ -117,17 +117,108 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS: list[Path] = [BASE_DIR / "static"]
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
-MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = "posts:feed"
-LOGIN_URL = "accounts:login"
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'posts:feed'
+
+# CKEditor（富文字 + 圖片上傳）
+CKEDITOR_UPLOAD_PATH = "ckeditor_uploads/"
+CKEDITOR_IMAGE_BACKEND = "pillow"
+# True 時依使用者名稱分資料夾；若設為字串則為 User 的屬性名稱
+CKEDITOR_RESTRICT_BY_USER = True
+CKEDITOR_BROWSE_SHOW_DIRS = True
+CKEDITOR_CONFIGS = {
+    "default": {
+        # 使用 Full 工具列並補上字型／字級（套件預設 Full 沒有 Font／FontSize）
+        "toolbar": "Full",
+        "height": 380,
+        "width": "100%",
+        "toolbar_Full": [
+            [
+                "Styles",
+                "Format",
+                "Font",
+                "FontSize",
+                "Bold",
+                "Italic",
+                "Underline",
+                "Strike",
+                "Subscript",
+                "Superscript",
+            ],
+            ["TextColor", "BGColor"],
+            ["Link", "Unlink", "Image", "Table", "HorizontalRule"],
+            [
+                "JustifyLeft",
+                "JustifyCenter",
+                "JustifyRight",
+                "JustifyBlock",
+            ],
+            [
+                "NumberedList",
+                "BulletedList",
+                "Outdent",
+                "Indent",
+                "Blockquote",
+            ],
+            ["RemoveFormat", "Source"],
+        ],
+        # 字級選項（可依需求增減）
+        "fontSize_sizes": (
+            "12/12px;14/14px;16/16px;18/18px;20/20px;24/24px;28/28px;32/32px;36/36px"
+        ),
+        "fontSize_defaultLabel": "16",
+    },
+}
+
+# bleach：儲存前允許的 HTML（與 CKEditor 輸出對齊）
+BLEACH_ALLOWED_TAGS = [
+    "p",
+    "br",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "u",
+    "s",
+    "sub",
+    "sup",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "img",
+    "blockquote",
+    "div",
+    "span",
+    # CKEditor 舊版或部分設定仍可能輸出 <font>
+    "font",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "hr",
+]
+BLEACH_ALLOWED_ATTRIBUTES = {
+    "*": ["class", "style"],
+    "a": ["href", "title", "rel", "target"],
+    "img": ["src", "alt", "title", "width", "height", "style"],
+    "font": ["color", "face", "size"],
+}
+BLEACH_ALLOWED_PROTOCOLS = ["http", "https", "data", "mailto"]

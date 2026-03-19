@@ -21,6 +21,7 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("ckeditor/", include("mysite.ckeditor_urls")),
     path("accounts/", include("accounts.urls")),
     path("", include("posts.urls")),
 ]

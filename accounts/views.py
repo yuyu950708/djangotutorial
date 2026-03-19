@@ -6,7 +6,7 @@ from django.contrib.auth.views import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import ProfileEditForm, RegisterForm
+from .forms import ProfileEditForm, RegisterForm, UsernameOrEmailAuthenticationForm
 from .models import Profile
 
 from posts.models import Post
@@ -14,6 +14,7 @@ from posts.models import Post
 
 class LoginView(DjangoLoginView):
     template_name = "accounts/login.html"
+    authentication_form = UsernameOrEmailAuthenticationForm
 
 
 class LogoutView(DjangoLogoutView):

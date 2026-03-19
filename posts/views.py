@@ -3,29 +3,24 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from .forms import PostForm
 from .models import Comment, Like, Post
 
 
 @login_required(login_url=settings.LOGIN_URL)
 def feed(request):
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            return redirect("posts:feed")
+    else:
+        form = PostForm()
+
     posts = Post.objects.select_related("author").prefetch_related("likes", "comments").all()
-    return render(request, "posts/feed.html", {"posts": posts})
-
-
-def post_create(request):
-    if not request.user.is_authenticated:
-        return redirect(settings.LOGIN_URL)
-    if request.method != "POST":
-        return redirect("posts:feed")
-    content = (request.POST.get("content") or "").strip()
-    if not content:
-        return redirect("posts:feed")
-    Post.objects.create(author=request.user, content=content)
-    return redirect("posts:feed")
-
-
-def post_detail(request, pk):
-    return HttpResponse(f"Post detail {pk} (to be implemented)")
+    return render(request, "posts/feed.html", {"posts": posts, "form": form})
 
 
 @login_required(login_url=settings.LOGIN_URL)
@@ -49,3 +44,6 @@ def comment_create(request, pk):
         Comment.objects.create(post=post, author=request.user, content=content)
     return redirect("posts:feed")
 
+
+def post_detail(request, pk):
+    return HttpResponse(f"Post detail {pk} (to be implemented)")

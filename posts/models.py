@@ -1,3 +1,4 @@
+from ckeditor_uploader.fields import RichTextUploadingField
 from django.conf import settings
 from django.db import models
 
@@ -8,7 +9,7 @@ class Post(models.Model):
         on_delete=models.CASCADE,
         related_name="posts",
     )
-    content = models.TextField()
+    content = RichTextUploadingField()
     image = models.ImageField(upload_to="posts/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
