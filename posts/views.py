@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from urllib.parse import urlencode
 
 from accounts.models import Profile
 
@@ -65,7 +67,8 @@ def like_toggle(request, pk):
         Like.objects.get_or_create(user=request.user, post=post)
     search_query = (request.GET.get("q") or "").strip()
     if search_query:
-        return redirect(f"{settings.LOGIN_REDIRECT_URL}?q={search_query}")
+        feed_url = reverse("posts:feed")
+        return redirect(f"{feed_url}?{urlencode({'q': search_query})}")
     return redirect("posts:feed")
 
 
@@ -79,7 +82,8 @@ def comment_create(request, pk):
         Comment.objects.create(post=post, author=request.user, content=content)
     search_query = (request.POST.get("q") or "").strip()
     if search_query:
-        return redirect(f"{settings.LOGIN_REDIRECT_URL}?q={search_query}")
+        feed_url = reverse("posts:feed")
+        return redirect(f"{feed_url}?{urlencode({'q': search_query})}")
     return redirect("posts:feed")
 
 
