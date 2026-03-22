@@ -1,17 +1,25 @@
 from django import forms
 from django.contrib.auth import authenticate
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.contrib.auth.models import User
 
 from .models import Profile
 
+User = get_user_model()
+
 
 class RegisterForm(UserCreationForm):
-    email = forms.EmailField(required=False)
+    email = forms.EmailField(required=True)
 
     class Meta:
         model = User
         fields = ("username", "email", "password1", "password2")
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("This email is already registered.")
+        return email
 
 
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
@@ -45,4 +53,4 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
 class ProfileEditForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ("bio", "website", "avatar")
+        fields = ("bio", "dietary_preference", "avatar")

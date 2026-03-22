@@ -13,8 +13,8 @@
             <textarea name="bio" id="id_bio" class="min-h-[6rem] w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" rows="3">{{ form.bio.value|default:'' }}</textarea>
           </div>
           <div class="mb-4">
-            <label for="id_website" class="mb-1 block text-sm font-medium text-slate-600">個人網站</label>
-            <input type="url" name="website" id="id_website" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" value="{{ form.website.value|default:'' }}" placeholder="https://" inputmode="url">
+            <label for="id_dietary_preference" class="mb-1 block text-sm font-medium text-slate-600">體質紀錄</label>
+            <input type="text" name="dietary_preference" id="id_dietary_preference" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" value="{{ form.dietary_preference.value|default:'' }}" placeholder="例如：少油、清淡、無辣、低醣">
           </div>
           <div class="mb-6">
             <label for="id_avatar" class="mb-1 block text-sm font-medium text-slate-600">頭像</label>

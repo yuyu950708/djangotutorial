@@ -1,5 +1,5 @@
 from django.contrib.auth import login
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth.views import (
     LoginView as DjangoLoginView,
     LogoutView as DjangoLogoutView,
@@ -10,6 +10,8 @@ from .forms import ProfileEditForm, RegisterForm, UsernameOrEmailAuthenticationF
 from .models import Profile
 
 from posts.models import Post
+
+User = get_user_model()
 
 
 class LoginView(DjangoLoginView):
