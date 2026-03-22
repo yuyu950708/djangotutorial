@@ -1,71 +1,64 @@
+import random
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-
 from posts.models import Category, Post, Tag
 
+SEED_MARKER = ""
+
+# 對應 media/posts/ 裡的 4 張照片
+LOCAL_POST_IMAGES = [
+    "posts/1.jpg",
+    "posts/2.jpg",
+    "posts/3.jpg",
+    "posts/4.jpg",
+]
+
+# 簡潔有力的文案
+SEED_POSTS = [
+    {"title": "超好吃拉麵", "body": "這家真的好吃，推！🍜"},
+    {"title": "吃土首選", "body": "份量超足，好吃！"},
+    {"title": "經典甜點", "body": "這家甜點讚，必吃。"},
+    {"title": "推薦拉麵", "body": "湯頭很讚，好吃！"},
+]
 
 class Command(BaseCommand):
-    help = "Seed categories, tags, and sample posts for local development."
+    help = "建立 4 篇簡單的測試貼文。"
 
     @transaction.atomic
     def handle(self, *args, **options):
-        user_model = get_user_model()
-        admin_user = user_model.objects.filter(is_superuser=True).order_by("id").first()
-        if admin_user is None:
-            raise CommandError("No superuser found. Please create a superuser before seeding data.")
+        User = get_user_model()
+        admin_user = User.objects.filter(is_superuser=True).first()
+        
+        if not admin_user:
+            raise CommandError("找不到超級管理員，請先跑 createsuperuser！")
 
-        categories = {
-            name: Category.objects.get_or_create(name=name)[0]
-            for name in ("中式", "日式", "美式")
-        }
-        tags = {
-            name: Tag.objects.get_or_create(name=name)[0]
-            for name in ("辣", "健康", "便宜")
-        }
+        # 確保分類與標籤存在
+        cats = [Category.objects.get_or_create(name=n)[0] for n in ("中式", "日式", "美式")]
+        tgs = [Tag.objects.get_or_create(name=n)[0] for n in ("辣", "健康", "便宜")]
 
-        seed_posts = [
-            {
-                "title": "深夜也想吃的川味牛肉麵",
-                "category": categories["中式"],
-                "content": (
-                    "<p>這是一篇測試貼文，想吃點香辣又有飽足感的中式料理。</p>"
-                    "<p>圖片 URL：https://placehold.co/1200x800/png?text=Chinese+Food</p>"
-                ),
-                "tag_names": ["辣", "便宜"],
-            },
-            {
-                "title": "清爽系鮭魚定食午餐",
-                "category": categories["日式"],
-                "content": (
-                    "<p>這是一篇測試貼文，適合想吃得清爽一點的日式選擇。</p>"
-                    "<p>圖片 URL：https://placehold.co/1200x800/png?text=Japanese+Set</p>"
-                ),
-                "tag_names": ["健康", "便宜"],
-            },
-        ]
+        # 清除舊的測試資料
+        Post.objects.filter(content__contains=SEED_MARKER).delete()
 
-        created_count = 0
-        updated_count = 0
+        rng = random.SystemRandom()
 
-        for seed_post in seed_posts:
-            post, created = Post.objects.get_or_create(
-                title=seed_post["title"],
-                author=admin_user,
-                defaults={
-                    "category": seed_post["category"],
-                    "content": seed_post["content"],
-                },
+        for i, seed in enumerate(SEED_POSTS):
+            image_filename = LOCAL_POST_IMAGES[i]
+            image_url = f"{settings.MEDIA_URL}{image_filename}"
+            
+            content = (
+                f"{SEED_MARKER}"
+                f"<p>{seed['body']}</p>"
+                f"<img src='{image_url}' style='max-width:100%; height:auto; border-radius:8px;'>"
             )
-            if created:
-                created_count += 1
-            else:
-                post.category = seed_post["category"]
-                post.content = seed_post["content"]
-                post.save(update_fields=["category", "content", "updated_at"])
-                updated_count += 1
 
-            post.tags.set([tags[name] for name in seed_post["tag_names"]])
+            post = Post.objects.create(
+                author=admin_user,
+                category=rng.choice(cats),
+                title=seed["title"],
+                content=content,
+            )
+            post.tags.set(rng.sample(tgs, k=rng.randint(1, 2)))
 
-        self.stdout.write(self.style.SUCCESS(f"Seed completed. Created {created_count} post(s), updated {updated_count} post(s)."))
-        self.stdout.write(f"Seed author: {admin_user.username}")
+        self.stdout.write(self.style.SUCCESS(f"成功建立 {len(SEED_POSTS)} 篇測試文！"))
