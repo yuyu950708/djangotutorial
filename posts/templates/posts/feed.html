@@ -4,6 +4,15 @@
 
 {% block extra_head %}
 {% if user.is_authenticated %}{{ form.media }}{% endif %}
+<style>
+  /* Make the compose editor shorter on the feed page only */
+  .post-compose .cke_contents {
+    height: 180px !important;
+  }
+  .post-compose .cke_bottom {
+    display: none;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -44,7 +53,7 @@
   </div>
 
   {% if user.is_authenticated and not search_query %}
-    <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
+    <div class="post-compose mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
       <form action="{% url 'posts:feed' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {% if form.non_field_errors %}
