@@ -3,7 +3,7 @@
 {% block title %}首頁 - 等等吃啥{% endblock %}
 
 {% block extra_head %}
-{{ form.media }}
+{% if user.is_authenticated %}{{ form.media }}{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -148,14 +148,22 @@
         {% endif %}
 
         <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-          <span>{{ post.likes.count }} 讚</span>
-          <span>{{ post.comments.count }} 留言</span>
+          <span>{{ post.like_count }} 讚</span>
+          <span>{{ post.comment_count|default:0 }} 留言</span>
         </div>
 
         {% if user.is_authenticated %}
           <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3">
-            <a href="{% url 'posts:like_toggle' post.pk %}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50">按讚 / 取消按讚</a>
-            <a href="{% url 'posts:collect_toggle' post.pk %}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">收藏 / 取消收藏</a>
+            <form method="post" action="{% url 'posts:like_toggle' post.pk %}" class="w-full sm:w-auto">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto">按讚 / 取消按讚</button>
+            </form>
+            <form method="post" action="{% url 'posts:collect_toggle' post.pk %}" class="w-full sm:w-auto">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">收藏 / 取消收藏</button>
+            </form>
           </div>
 
           <hr class="my-4 border-slate-200">
@@ -170,6 +178,7 @@
 
           <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-3">
             {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
               <input type="text" name="content" class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" placeholder="留言..." required autocomplete="off">
               <button type="submit" class="min-h-11 w-full shrink-0 rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-600 hover:bg-sky-50 sm:w-auto">送出</button>
@@ -183,5 +192,19 @@
       </div>
     {% endfor %}
   </div>
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-6 flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow sm:px-5">
+      <div class="text-slate-500">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</div>
+      <div class="flex gap-2">
+        {% if page_obj.has_previous %}
+          <a class="rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">上一頁</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a class="rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">下一頁</a>
+        {% endif %}
+      </div>
+    </nav>
+  {% endif %}
 </div>
 {% endblock %}

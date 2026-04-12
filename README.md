@@ -14,7 +14,7 @@
 | :--- | :--- | :---: |
 | **會員管理** | 提供註冊、登入/登出，以及個人資料與頭像維護。 | ✅ 已完成 |
 | **社群貼文** | 支援發布含圖片之貼文，提供按讚與留言互動功能。 | ✅ 已完成 |
-| **搜尋篩選** | 具備關鍵字搜尋與分類/標籤篩選功能。 | 🔄 優化中 |
+| **搜尋篩選** | 具備關鍵字搜尋與分類/標籤篩選功能。 | ✅ 已完成（可優化） |
 | **互動追蹤** | 提供貼文收藏與會員間的追蹤功能，強化社群黏性。 | ⏳ 待開發 |
 | **後台管理** | 管理員可針對使用者、內容與分類標籤進行 CRUD 維護。 | ✅ 已完成 |
 
@@ -61,7 +61,7 @@
 | Profile | `/accounts/profile/edit/` | `accounts` | FBV `profile_edit` | GET/POST | Member |
 | Profile | `/accounts/@<username>/` | `accounts` | FBV `profile_detail` | GET | Public（目前開放） |
 | Feed | `/` | `posts` | FBV `feed` | GET/POST | Member（`login_required`） |
-| Post | `/<pk>/` | `posts` | FBV `post_detail` | GET | 未完成（目前 placeholder） |
+| Post | `/<pk>/` | `posts` | FBV `post_detail` | GET | ✅ 已完成 |
 | Like | `/<pk>/like-toggle/` | `posts` | FBV `like_toggle` | POST（實作上目前允許 GET 也會走） | Member（`login_required`） |
 | Comment | `/<pk>/comment/` | `posts` | FBV `comment_create` | POST | Member（`login_required`） |
 
@@ -70,10 +70,10 @@
 | 功能 | 建議 Path | 說明 |
 | :--- | :--- | :--- |
 | 分類/標籤篩選 | `/?category=<id>&tag=<id>` 或 `/tags/<id>/` | 目前 model 有 `Category/Tag`，但前台尚未做 UI/查詢 |
-| 編輯/刪除貼文 | `/<pk>/edit/`、`/<pk>/delete/` | 限貼文作者（資料層需過濾 `author=request.user`） |
-| 收藏貼文 | `/<pk>/collect-toggle/` | 對 `Collection` 建立/刪除 |
-| 追蹤會員 | `/accounts/@<username>/follow-toggle/` | 對 `Follow` 建立/刪除 |
-| 搜尋紀錄 |（隱式）| 搜尋時寫入 `SearchLog`（目前尚未寫入） |
+| 編輯/刪除貼文 | `/<pk>/edit/`、`/<pk>/delete/` | ✅ 已完成（限貼文作者，資料層過濾 `author=request.user`） |
+| 收藏貼文 | `/<pk>/collect-toggle/`、`/collections/` | ✅ 已完成（toggle + 收藏列表） |
+| 追蹤會員 | `/accounts/@<username>/follow-toggle/` | ✅ 已完成（禁止自追蹤） |
+| 搜尋紀錄 |（隱式）| ✅ 已完成（搜尋時寫入 `SearchLog`） |
 
 ### RESTful API（期末範圍：建議納入規劃）
 

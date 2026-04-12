@@ -43,7 +43,11 @@
           </div>
           <div class="shrink-0 flex items-center gap-2">
             <a href="{% url 'posts:post_detail' post.pk %}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm">查看</a>
-            <a href="{% url 'posts:collect_toggle' post.pk %}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm">取消收藏</a>
+            <form method="post" action="{% url 'posts:collect_toggle' post.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm">取消收藏</button>
+            </form>
           </div>
         </div>
 
@@ -65,6 +69,19 @@
       </div>
     {% endfor %}
   </div>
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-6 flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow sm:px-5">
+      <div class="text-slate-500">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</div>
+      <div class="flex gap-2">
+        {% if page_obj.has_previous %}
+          <a class="rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50" href="?page={{ page_obj.previous_page_number }}">上一頁</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a class="rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50" href="?page={{ page_obj.next_page_number }}">下一頁</a>
+        {% endif %}
+      </div>
+    </nav>
+  {% endif %}
 </div>
 {% endblock %}
-

@@ -1,10 +1,16 @@
+import re
+from datetime import timedelta
+
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from urllib.parse import urlencode
 import re
 
@@ -14,13 +20,20 @@ from .forms import CategoryForm, PostEditForm, PostForm, TagForm
 from .models import Category, Collection, Comment, Like, Post, SearchLog, Tag
 
 
-@login_required(login_url=settings.LOGIN_URL)
 def feed(request):
     search_query = (request.GET.get("q") or "").strip()
     category_id = (request.GET.get("category") or "").strip()
     tag_id = (request.GET.get("tag") or "").strip()
+    page_number = (request.GET.get("page") or "").strip()
+
+    if len(search_query) > 100:
+        search_query = search_query[:100]
+        messages.info(request, "搜尋字數過長，已自動截斷。")
 
     if request.method == "POST":
+        if not request.user.is_authenticated:
+            return redirect(f"{settings.LOGIN_URL}?{urlencode({'next': request.get_full_path()})}")
+
         # Use the edit form for creation too, so users can add new category/tags inline.
         form = PostEditForm(request.POST, request.FILES)
         if form.is_valid():
@@ -51,17 +64,25 @@ def feed(request):
     posts = (
         Post.objects.select_related("author", "author__profile", "category")
         .prefetch_related("likes", "comments", "tags")
+        .annotate(comment_count=Count("comments", distinct=True))
     )
     if search_query:
         posts = posts.filter(
             Q(content__icontains=search_query) | Q(author__username__icontains=search_query)
         )
-        SearchLog.objects.create(user=request.user, keyword=search_query)
+        if request.user.is_authenticated:
+            last = (
+                SearchLog.objects.filter(user=request.user, keyword=search_query)
+                .order_by("-created_at")
+                .first()
+            )
+            if last is None or last.created_at < timezone.now() - timedelta(seconds=30):
+                SearchLog.objects.create(user=request.user, keyword=search_query)
 
     if category_id.isdigit():
         posts = posts.filter(category_id=int(category_id))
     if tag_id.isdigit():
-        posts = posts.filter(tags__id=int(tag_id))
+        posts = posts.filter(tags__id=int(tag_id)).distinct()
     posts = posts.all()
 
     author_ids = set(posts.values_list("author_id", flat=True))
@@ -72,6 +93,7 @@ def feed(request):
         posts = (
             Post.objects.select_related("author", "author__profile", "category")
             .prefetch_related("likes", "comments", "tags")
+            .annotate(comment_count=Count("comments", distinct=True))
         )
         if search_query:
             posts = posts.filter(
@@ -80,17 +102,22 @@ def feed(request):
         if category_id.isdigit():
             posts = posts.filter(category_id=int(category_id))
         if tag_id.isdigit():
-            posts = posts.filter(tags__id=int(tag_id))
+            posts = posts.filter(tags__id=int(tag_id)).distinct()
         posts = posts.all()
+
+    paginator = Paginator(posts, 20)
+    page_obj = paginator.get_page(page_number or 1)
 
     return render(
         request,
         "posts/feed.html",
         {
-            "posts": posts,
+            "posts": page_obj.object_list,
+            "page_obj": page_obj,
+            "paginator": paginator,
             "form": form,
             "search_query": search_query,
-            "results_count": posts.count(),
+            "results_count": paginator.count,
             "categories": Category.objects.all(),
             "tags": Tag.objects.all(),
             "selected_category": category_id,
@@ -102,6 +129,8 @@ def feed(request):
 @login_required(login_url=settings.LOGIN_URL)
 def like_toggle(request, pk):
     post = get_object_or_404(Post, pk=pk)
+    if request.method != "POST":
+        return redirect("posts:feed")
     like = post.likes.filter(user=request.user).first()
     if like:
         like.delete()
@@ -109,16 +138,17 @@ def like_toggle(request, pk):
     else:
         Like.objects.get_or_create(user=request.user, post=post)
         messages.success(request, "已按讚。")
-    search_query = (request.GET.get("q") or "").strip()
-    if search_query:
-        feed_url = reverse("posts:feed")
-        return redirect(f"{feed_url}?{urlencode({'q': search_query})}")
+    next_url = (request.POST.get("next") or "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
     return redirect("posts:feed")
 
 
 @login_required(login_url=settings.LOGIN_URL)
 def collect_toggle(request, pk):
     post = get_object_or_404(Post, pk=pk)
+    if request.method != "POST":
+        return redirect("posts:feed")
     collection = post.collections.filter(user=request.user).first()
     if collection:
         collection.delete()
@@ -126,7 +156,10 @@ def collect_toggle(request, pk):
     else:
         Collection.objects.get_or_create(user=request.user, post=post)
         messages.success(request, "已收藏貼文。")
-    return redirect(request.META.get("HTTP_REFERER") or "posts:feed")
+    next_url = (request.POST.get("next") or "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect("posts:feed")
 
 
 @login_required(login_url=settings.LOGIN_URL)
@@ -135,13 +168,16 @@ def comment_create(request, pk):
     if request.method != "POST":
         return redirect("posts:feed")
     content = (request.POST.get("content") or "").strip()
+    if len(content) > 500:
+        content = content[:500]
     if content:
         Comment.objects.create(post=post, author=request.user, content=content)
         messages.success(request, "留言已送出。")
-    search_query = (request.POST.get("q") or "").strip()
-    if search_query:
-        feed_url = reverse("posts:feed")
-        return redirect(f"{feed_url}?{urlencode({'q': search_query})}")
+    else:
+        messages.error(request, "留言內容不可為空。")
+    next_url = (request.POST.get("next") or "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
     return redirect("posts:feed")
 
 
@@ -260,4 +296,15 @@ def collections_list(request):
         .order_by("-created_at")
     )
     posts = [c.post for c in collections]
-    return render(request, "posts/collections.html", {"posts": posts, "collections_count": len(posts)})
+    paginator = Paginator(posts, 20)
+    page_obj = paginator.get_page((request.GET.get("page") or "").strip() or 1)
+    return render(
+        request,
+        "posts/collections.html",
+        {
+            "posts": page_obj.object_list,
+            "collections_count": paginator.count,
+            "page_obj": page_obj,
+            "paginator": paginator,
+        },
+    )
