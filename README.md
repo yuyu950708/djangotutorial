@@ -1,27 +1,32 @@
-# 🍴 等等吃啥 (EatWhat)
-「身為一個午餐選擇困難的使用者，我希望透過標籤篩選貼文，參考他人的美食分享，以解決選擇困難並獲取用餐靈感。」
+﻿# 🍴 等等吃啥 (EatWhat)
 
-本專案是一個以美食為核心的社群平台，旨在透過直覺的分類與標籤系統，串聯會員間的飲食經驗。
+美食社群平台專案，提供會員註冊登入、貼文分享、留言按讚，以及管理員後台管理等功能。
+
+---
 
 ## 📋 系統需求說明 (System Requirements)
+
 本專案旨在建立一個高效、直覺的美食社群平台，以下為系統核心需求規劃：
 
 ### 1. 功能性需求 (Functional Requirements)
+
 | 模組 | 功能描述 | 狀態 |
 | :--- | :--- | :---: |
 | **會員管理** | 提供註冊、登入/登出，以及個人資料與頭像維護。 | ✅ 已完成 |
-| **社群貼文** | 支援發布含圖片之食譜貼文，提供按讚與留言互動功能。 | ✅ 已完成 |
-| **搜尋篩選** | 具備關鍵字搜尋與分類/標籤篩選功能，搜尋結果具唯一性。 | 🔄 優化中 |
+| **社群貼文** | 支援發布含圖片之貼文，提供按讚與留言互動功能。 | ✅ 已完成 |
+| **搜尋篩選** | 具備關鍵字搜尋與分類/標籤篩選功能。 | 🔄 優化中 |
 | **互動追蹤** | 提供貼文收藏與會員間的追蹤功能，強化社群黏性。 | ⏳ 待開發 |
 | **後台管理** | 管理員可針對使用者、內容與分類標籤進行 CRUD 維護。 | ✅ 已完成 |
 
 ### 2. 非功能性需求 (Non-functional Requirements)
-- **資料架構**：採用 **MariaDB** 關聯式資料庫，確保資料存取效能與結構完整性。
-- **安全性**：導入 Django 內建密碼雜湊與 **CSRF 防護**。
-- **介面整合**：前端目前以 Django Template 搭配 Form / Widget 整合頁面，後續持續優化 UI 一致性。
-- **效能優化**：搜尋與資料關聯查詢將持續調整，以提升查詢效率與結果正確性。
+
+- **資料架構**：採用 **MariaDB** 關聯式資料庫，確保資料存取效能與結構完整性（如 Post 與 Tag 的多對多關聯）。
+- **安全性**：全面導入 Django 內建密碼雜湊加密與 **CSRF 防護**。
+- **介面整合**：前端整合 CSS Framework（仍在調整 class/相容性），並利用 **Django Form/Widget** 實現 UI 一致性。
+- **效能優化**：查詢持續優化（例如 `select_related()` / `prefetch_related()`；必要時 `.distinct()`），確保計數與結果正確。
 
 ### 💻 技術棧 (Tech Stack)
+
 - **Backend**: Django 5.x (Python)
 - **Database**: MariaDB 10.x
 - **Frontend**: HTML5, CSS3, JavaScript, Django Template
@@ -29,102 +34,123 @@
 
 ---
 
+## 🧭 Admin 客製化規劃（已落地）
+
+已完成以下後台客製化：
+
+- 站台標題：`site_header/site_title/index_title`
+- 列表體驗：`date_hierarchy`、`ordering`、`list_per_page`、`list_select_related`
+- Filter/搜尋：`list_filter`（含 tags/author）、`search_fields`
+- Inline：Post 編輯頁可 inline 編輯 Comment
+- Actions：批次重算 `like_count`、匯出選取貼文 CSV
+- 匯出：整合 `django-import-export`（Post 可匯出）
+
+---
+
+## 🧩 系統設計：URL Router 規劃（Endpoints 對照表）
+
+### Web（目前已實作）
+
+| 類型 | Path | App / Namespace | View | HTTP Methods | 認證 / 權限 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Admin | `/admin/` | Django Admin | Django Admin Site | GET/POST | Staff / Superuser |
+| Tools | `/ckeditor/` | `mysite` | CKEditor uploader URLs | GET/POST | 依 CKEditor 設定與 Django 權限 |
+| Auth | `/accounts/register/` | `accounts` | FBV `register` | GET/POST | Guest |
+| Auth | `/accounts/login/` | `accounts` | CBV `LoginView` | GET/POST | Guest |
+| Auth | `/accounts/logout/` | `accounts` | CBV `LogoutView` | GET | Member |
+| Profile | `/accounts/profile/edit/` | `accounts` | FBV `profile_edit` | GET/POST | Member |
+| Profile | `/accounts/@<username>/` | `accounts` | FBV `profile_detail` | GET | Public（目前開放） |
+| Feed | `/` | `posts` | FBV `feed` | GET/POST | Member（`login_required`） |
+| Post | `/<pk>/` | `posts` | FBV `post_detail` | GET | 未完成（目前 placeholder） |
+| Like | `/<pk>/like-toggle/` | `posts` | FBV `like_toggle` | POST（實作上目前允許 GET 也會走） | Member（`login_required`） |
+| Comment | `/<pk>/comment/` | `posts` | FBV `comment_create` | POST | Member（`login_required`） |
+
+### Web（已規劃，尚未完成）
+
+| 功能 | 建議 Path | 說明 |
+| :--- | :--- | :--- |
+| 分類/標籤篩選 | `/?category=<id>&tag=<id>` 或 `/tags/<id>/` | 目前 model 有 `Category/Tag`，但前台尚未做 UI/查詢 |
+| 編輯/刪除貼文 | `/<pk>/edit/`、`/<pk>/delete/` | 限貼文作者（資料層需過濾 `author=request.user`） |
+| 收藏貼文 | `/<pk>/collect-toggle/` | 對 `Collection` 建立/刪除 |
+| 追蹤會員 | `/accounts/@<username>/follow-toggle/` | 對 `Follow` 建立/刪除 |
+| 搜尋紀錄 |（隱式）| 搜尋時寫入 `SearchLog`（目前尚未寫入） |
+
+### RESTful API（期末範圍：建議納入規劃）
+
+| 資源 | 建議 Endpoint | Methods | 權限（建議） |
+| :--- | :--- | :--- | :--- |
+| Auth | `/api/auth/login` | POST | Public |
+| Profile | `/api/users/<id>/profile` | GET/PATCH | Owner 或 Admin |
+| Posts | `/api/posts` | GET/POST | GET: Public/Member，POST: Member |
+| Post | `/api/posts/<id>` | GET/PATCH/DELETE | Owner 或 Admin |
+| Likes | `/api/posts/<id>/likes` | POST/DELETE | Member |
+| Comments | `/api/posts/<id>/comments` | GET/POST | GET: Public/Member，POST: Member |
+| Tags | `/api/tags` | GET | Public |
+| Categories | `/api/categories` | GET | Public |
+| Follow | `/api/follows` | POST/DELETE | Member |
+| Collections | `/api/collections` | GET/POST/DELETE | Member |
+| Search Logs | `/api/search-logs` | GET | Admin（或 Owner） |
+
+---
+
+## 🛠️ 系統開發（待辦清單）
+
+- 建立資料查詢/統計並顯示於前端
+- 將文字統計改為圖表呈現
+- 優化 templates（RWD）
+- 前端加入 messages（目前 base template 已有 messages 區塊，可持續擴充提示訊息）
+- 導入 CAPTCHA、客製化登入頁（視需求）
+- 依 Use Cases 透過 Generic View 或其他方式建立表單
+- 設計可上傳媒體檔案並編輯欄位資訊的表單
+
+---
+
 ## 🚀 開發人員同步指南
 
-
-## 1. 安裝套件
-
-先進到專案根目錄，安裝 Python 依賴：
+### 1. 安裝套件
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-目前專案資料庫驅動使用的是 `PyMySQL`，已包含在 `requirements.txt` 內。
+### 2. 資料庫準備（MariaDB）
 
-## 2. 準備資料庫
-
-請打開 HeidiSQL 或你習慣的資料庫管理工具，手動建立一個資料庫：
+請建立資料庫：
 
 - Database Name：`eat_what`
 - Collation：`utf8mb4_unicode_ci`
 
-## 3. 修改本機資料庫連線設定
+### 3. 修改本地設定（連線到你的 MariaDB）
 
-請開啟 [mysite/settings.py](C:\Users\11146076\Desktop\djangotutorial\mysite\settings.py)，找到 `DATABASES` 區塊，依照你的本機 MariaDB 環境修改下面欄位：
+請調整 `mysite/settings.py` 的 `DATABASES`：
 
 - `NAME`：通常維持 `eat_what`
-- `USER`：你的 MariaDB 帳號，常見是 `root`
-- `PASSWORD`：你的 MariaDB 密碼
-- `HOST`：通常是 `127.0.0.1`
-- `PORT`：預設通常是 `3306`，如果你的本機是另外開的埠號，也請改成自己的值
+- `USER` / `PASSWORD`：你的 MariaDB 帳密
+- `HOST`：通常 `127.0.0.1`
+- `PORT`：通常 `3306`（若你本機另開埠號請自行調整）
 
-目前專案中的 `DATABASES` 範例：
-
-```python
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "eat_what",
-        "USER": "root",
-        "PASSWORD": "root",
-        "HOST": "127.0.0.1",
-        "PORT": "3308",
-        "OPTIONS": {
-            "charset": "utf8mb4",
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
-}
-```
-
-請改成你自己的本機設定，不要直接沿用別人的帳密。
-
-## 4. 同步資料表結構
-
-在終端機執行：
+### 4. 同步資料表
 
 ```powershell
 python manage.py migrate
 ```
 
-## 5. 建立超級管理員
-
-如果你本機還沒有管理員帳號，請執行：
+### 5. 建立超級管理員
 
 ```powershell
 python manage.py createsuperuser
 ```
 
-`seed_data` 會把測試貼文作者綁到第一個超級管理員，所以建議先完成這一步。
+### 6. 灌入測試資料
 
-## 6. 灌入測試資料
-
-執行以下指令後，系統會自動建立：
-
-- 3 個分類：`中式`、`日式`、`美式`
-- 3 個標籤：`辣`、`健康`、`便宜`
-- 4 篇測試貼文
-
-每次執行 `seed_data` 都會先刪掉舊的 seed 測試貼文，再重建一批新的，不會越塞越多。
+會建立 3 個分類、3 個標籤、10 篇測試貼文；每次執行會先清掉舊的 seed 貼文再重建。
 
 ```powershell
 python manage.py seed_data
 ```
 
-## 7. 啟動開發伺服器
+### 7. 啟動伺服器
 
 ```powershell
 python manage.py runserver
 ```
-
-打開瀏覽器後可使用：
-
-- 前台首頁：http://127.0.0.1:8000/
-- Django Admin：http://127.0.0.1:8000/admin/
-
-## 補充提醒
-
-- 如果 `migrate` 時出現 MariaDB 帳密錯誤，請先檢查 `settings.py` 的 `USER`、`PASSWORD`、`PORT` 是否正確。
-- 如果你是第一次開發這個專案，建議順序是：`migrate` -> `createsuperuser` -> `seed_data` -> `runserver`
-- 目前專案已不再使用 SQLite，也不需要 `polls` app。

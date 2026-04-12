@@ -34,6 +34,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "posts.apps.PostsConfig",
+    "import_export",
     "js_asset",
     "ckeditor",
     "ckeditor_uploader",

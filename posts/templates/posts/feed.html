@@ -1,138 +1,187 @@
 {% extends "base.html" %}
 
-{% block title %}首頁 - 社群網站{% endblock %}
+{% block title %}首頁 - 等等吃啥{% endblock %}
 
 {% block extra_head %}
 {{ form.media }}
-<style>
-  /* 手機版：用包裝層提高選擇性，不使用 !important */
-  @media (max-width: 767px) {
-    .ckeditor-responsive .cke_chrome,
-    .ckeditor-responsive .cke_inner {
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-  }
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="mx-auto w-full max-w-3xl">
-    <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
-        <form action="{% url 'posts:feed' %}" method="get" class="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            type="text"
-            name="q"
-            value="{{ search_query|default:'' }}"
-            class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm"
-            placeholder="搜尋貼文內容或發文者"
-          >
-          <div class="flex gap-2">
-            <button type="submit" class="min-h-11 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600">搜尋</button>
-            {% if search_query %}
-            <a href="{% url 'posts:feed' %}" class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">清除</a>
-            {% endif %}
-          </div>
-        </form>
-        {% if search_query %}
-        <p class="mt-2 text-sm text-slate-500">關鍵字「{{ search_query }}」共找到 {{ results_count }} 篇貼文</p>
-        {% endif %}
-    </div>
+  <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
+    <form action="{% url 'posts:feed' %}" method="get" class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query|default:'' }}"
+        class="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm"
+        placeholder="搜尋貼文內容或發文者"
+      >
+      <div class="flex gap-2">
+        <button type="submit" class="min-h-11 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600">搜尋</button>
+        <a href="{% url 'posts:feed' %}" class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">清除</a>
+      </div>
 
-    {% if user.is_authenticated and not search_query %}
-    <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
-        <form action="{% url 'posts:feed' %}" method="post" enctype="multipart/form-data">
-          {% csrf_token %}
-          {% if form.non_field_errors %}
-          <div class="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{{ form.non_field_errors }}</div>
-          {% endif %}
-          <div class="mb-3 min-w-0">
-            <label class="mb-1 block text-sm font-medium text-slate-600">內容（可調字級、顏色、插入圖片）</label>
-            <div class="ckeditor-responsive w-full max-w-full min-w-0 overflow-x-auto">
-              {{ form.content }}
-            </div>
-            {% if form.content.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.content.errors.0 }}</p>{% endif %}
-          </div>
-          <div class="mb-4">
-            <label for="{{ form.image.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">附加封面圖（選填）</label>
-            {{ form.image }}
-            {% if form.image.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.image.errors.0 }}</p>{% endif %}
-          </div>
-          <button type="submit" class="min-h-11 w-full rounded-lg bg-sky-400 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-600 sm:w-auto">發佈</button>
-        </form>
-    </div>
+      <div class="grid gap-2 sm:col-span-2 sm:grid-cols-2">
+        <select name="category" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm">
+          <option value="">全部分類</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {% if selected_category|default:'' == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <select name="tag" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm">
+          <option value="">全部標籤</option>
+          {% for t in tags %}
+            <option value="{{ t.id }}" {% if selected_tag|default:'' == t.id|stringformat:'s' %}selected{% endif %}>#{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+
+    {% if search_query %}
+      <p class="mt-2 text-sm text-slate-500">關鍵字「{{ search_query }}」共找到 {{ results_count }} 篇貼文</p>
     {% endif %}
+  </div>
 
-    <div id="feed-list" class="space-y-3 sm:space-y-4">
-      {% for post in posts %}
-      <article class="rounded-xl bg-white p-4 shadow sm:p-5" data-post-id="{{ post.pk }}">
-          <div class="mb-2 flex items-center gap-3">
-            <a href="{% url 'accounts:profile_detail' post.author.username %}" class="shrink-0" aria-label="查看 {{ post.author.username }} 的個人資料">
-              {% if post.author.profile.avatar %}
-              <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.username }} 的頭像" class="h-11 w-11 rounded-full object-cover ring-1 ring-slate-200">
-              {% else %}
+  {% if user.is_authenticated and not search_query %}
+    <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
+      <form action="{% url 'posts:feed' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="mb-3">
+          <label for="{{ form.title.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">標題</label>
+          {{ form.title }}
+          {% if form.title.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.title.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="mb-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="{{ form.category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">分類</label>
+            {{ form.category }}
+            {% if form.category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.category.errors.0 }}</p>{% endif %}
+          </div>
+          <div>
+            <label for="{{ form.new_category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增分類</label>
+            {{ form.new_category }}
+            {% if form.new_category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.new_category.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+        <div class="mb-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="{{ form.tags.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">標籤</label>
+            {{ form.tags }}
+            {% if form.tags.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.tags.errors.0 }}</p>{% endif %}
+          </div>
+          <div>
+            <label for="{{ form.new_tags.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增標籤</label>
+            {{ form.new_tags }}
+            {% if form.new_tags.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.new_tags.errors.0 }}</p>{% endif %}
+            <p class="mt-1 text-xs text-slate-500">{{ form.new_tags.help_text }}</p>
+          </div>
+        </div>
+        <div class="mb-3 min-w-0">
+          <label class="mb-1 block text-sm font-medium text-slate-600">發布貼文</label>
+          <div class="w-full max-w-full min-w-0 overflow-x-auto">
+            {{ form.content }}
+          </div>
+          {% if form.content.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.content.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="mb-4">
+          <label for="{{ form.image.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">圖片（可選）</label>
+          {{ form.image }}
+          {% if form.image.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.image.errors.0 }}</p>{% endif %}
+        </div>
+        <button type="submit" class="min-h-11 w-full rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-600 sm:w-auto">發布</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <div class="space-y-3 sm:space-y-4">
+    {% for post in posts %}
+      <article class="rounded-xl bg-white p-4 shadow sm:p-5">
+        <div class="mb-2 flex items-start gap-3">
+          <a href="{% url 'accounts:profile_detail' post.author.username %}" class="shrink-0">
+            {% if post.author.profile.avatar %}
+              <img src="{{ post.author.profile.avatar.url }}" alt="" class="h-11 w-11 rounded-full object-cover ring-1 ring-slate-200">
+            {% else %}
               <div class="flex h-11 w-11 items-center justify-center rounded-full bg-slate-400 text-lg font-semibold text-white ring-1 ring-slate-200">
                 {{ post.author.username|slice:":1"|upper }}
               </div>
-              {% endif %}
-            </a>
-            <div class="min-w-0">
-              <a href="{% url 'accounts:profile_detail' post.author.username %}" class="block truncate font-semibold text-slate-800 hover:underline">
-                {{ post.author.username }}
-              </a>
-              <span class="text-sm text-slate-500">{{ post.created_at|timesince }} 前</span>
-            </div>
-          </div>
-          <div class="post-body mb-2 max-w-full overflow-x-auto leading-relaxed break-words [&_img]:my-2 [&_img]:max-h-[min(400px,60vh)] [&_img]:max-w-full [&_img]:rounded-lg [&_img]:object-contain [&_p]:mb-2 [&_table]:max-w-full [&_table]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
-            {{ post.content|safe }}
-          </div>
-          {% if post.image %}
-          <img src="{{ post.image.url }}" alt="" class="mb-2 w-full max-h-[min(400px,60vh)] rounded-lg object-cover">
-          {% endif %}
-          <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-            <span>{{ post.likes.count }} 個讚</span>
-            <span>{{ post.comments.count }} 則留言</span>
-          </div>
-          {% if user.is_authenticated %}
-          <div class="mt-3">
-            <a href="{% url 'posts:like_toggle' post.pk %}{% if search_query %}?q={{ search_query|urlencode }}{% endif %}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 active:bg-rose-50 hover:bg-rose-50">讚</a>
-          </div>
-          <hr class="my-4 border-slate-200">
-          <div x-data="{ expanded: false }">
-            {% for comment in post.comments.all %}
-            <p
-              class="mb-2 break-words text-sm sm:mb-1"
-              x-bind:class="(!expanded && {{ forloop.counter }} > 3) ? 'hidden' : ''"
-            ><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
-            {% empty %}
-            <p class="text-sm text-slate-400">還沒有留言</p>
-            {% endfor %}
-            {% if post.comments.count > 3 %}
-            <button
-              type="button"
-              class="mt-1 min-h-11 w-full rounded-lg py-2 text-left text-sm font-medium text-sky-600 hover:bg-sky-50 sm:w-auto sm:px-2"
-              @click="expanded = !expanded"
-              x-text="expanded ? '收合留言' : '查看更多（還有 {{ post.comments.count|add:'-3' }} 則）'"
-            ></button>
             {% endif %}
-            <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-3">
-              {% csrf_token %}
-              {% if search_query %}
-              <input type="hidden" name="q" value="{{ search_query }}">
-              {% endif %}
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-                <input type="text" name="content" class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" placeholder="留言..." required autocomplete="off">
-                <button type="submit" class="min-h-11 w-full shrink-0 rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-600 active:bg-sky-50 hover:bg-sky-50 sm:w-auto">送出</button>
+          </a>
+
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <a href="{% url 'accounts:profile_detail' post.author.username %}" class="truncate font-semibold text-slate-800 hover:underline">{{ post.author.username }}</a>
+              <span class="text-sm text-slate-500">{{ post.created_at|timesince }} 前</span>
+              {% if post.category %}<span class="text-sm text-slate-500">· {{ post.category.name }}</span>{% endif %}
+            </div>
+            {% if post.tags.all %}
+              <div class="mt-1 flex flex-wrap gap-2">
+                {% for tag in post.tags.all %}
+                  <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">#{{ tag.name }}</span>
+                {% endfor %}
               </div>
-            </form>
+            {% endif %}
           </div>
-          {% endif %}
+
+          <div class="shrink-0 flex items-center gap-2">
+            <a href="{% url 'posts:post_detail' post.pk %}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm">查看</a>
+            {% if user.is_authenticated and user == post.author %}
+              <a href="{% url 'posts:post_edit' post.pk %}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm">編輯</a>
+              <a href="{% url 'posts:post_delete' post.pk %}" class="rounded-lg border border-rose-300 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 sm:text-sm">刪除</a>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if post.title %}
+          <h2 class="mb-2 break-words text-base font-semibold sm:text-lg">{{ post.title }}</h2>
+        {% endif %}
+
+        <div class="post-body mb-2 max-w-full overflow-x-auto break-words leading-relaxed [&_img]:my-2 [&_img]:max-h-[min(400px,60vh)] [&_img]:max-w-full [&_img]:rounded-lg [&_img]:object-contain [&_p]:mb-2 [&_table]:max-w-full [&_table]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
+          {{ post.content|safe }}
+        </div>
+
+        {% if post.image %}
+          <img src="{{ post.image.url }}" alt="" class="mb-2 w-full max-h-[min(400px,60vh)] rounded-lg object-cover">
+        {% endif %}
+
+        <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+          <span>{{ post.likes.count }} 讚</span>
+          <span>{{ post.comments.count }} 留言</span>
+        </div>
+
+        {% if user.is_authenticated %}
+          <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3">
+            <a href="{% url 'posts:like_toggle' post.pk %}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50">按讚 / 取消按讚</a>
+            <a href="{% url 'posts:collect_toggle' post.pk %}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">收藏 / 取消收藏</a>
+          </div>
+
+          <hr class="my-4 border-slate-200">
+
+          <div class="space-y-2">
+            {% for comment in post.comments.all %}
+              <p class="break-words text-sm"><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
+            {% empty %}
+              <p class="text-sm text-slate-400">尚無留言</p>
+            {% endfor %}
+          </div>
+
+          <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-3">
+            {% csrf_token %}
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+              <input type="text" name="content" class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" placeholder="留言..." required autocomplete="off">
+              <button type="submit" class="min-h-11 w-full shrink-0 rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-600 hover:bg-sky-50 sm:w-auto">送出</button>
+            </div>
+          </form>
+        {% endif %}
       </article>
-      {% empty %}
+    {% empty %}
       <div class="rounded-xl bg-white px-6 py-10 text-center text-slate-500 shadow sm:px-10 sm:py-12">
-          <p class="text-sm sm:text-base">尚無貼文，{% if user.is_authenticated %}來發第一篇吧！{% else %}登入後即可發文與互動。{% endif %}</p>
+        <p class="text-sm sm:text-base">尚無貼文，{% if user.is_authenticated %}來發第一篇吧！{% else %}登入後即可發文與互動。{% endif %}</p>
       </div>
-      {% endfor %}
-    </div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

@@ -5,3 +5,4 @@ django-js-asset>=2.0
 bleach>=6
 tinycss2>=1.4
 PyMySQL>=1.1
+django-import-export>=4.3

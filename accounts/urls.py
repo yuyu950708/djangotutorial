@@ -10,6 +10,7 @@ urlpatterns = [
     path("login/", views.LoginView.as_view(), name="login"),
     path("logout/", views.LogoutView.as_view(), name="logout"),
     path("profile/edit/", views.profile_edit, name="profile_edit"),
+    path("@<str:username>/follow-toggle/", views.follow_toggle, name="follow_toggle"),
     path("@<str:username>/", views.profile_detail, name="profile_detail"),
 ]
 
