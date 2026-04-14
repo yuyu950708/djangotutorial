@@ -4,16 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}等等吃啥{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
   <style>html body [x-cloak] { display: none; }</style>
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('eatWhatWheel', () => ({
+        open: false,
+        rotation: 0,
+        spinning: false,
+        labels: ['中式', '日式', '美式', '火鍋', '便當', '拉麵', '咖啡', '隨便'],
+        result: '',
+        wheelGradient() {
+          const n = this.labels.length;
+          const seg = 360 / n;
+          const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#22d3ee', '#818cf8', '#c084fc'];
+          const stops = this.labels.map((_, i) => `${colors[i % colors.length]} ${i * seg}deg ${(i + 1) * seg}deg`).join(', ');
+          return `conic-gradient(from -90deg, ${stops})`;
+        },
+        spin() {
+          if (this.spinning) return;
+          this.spinning = true;
+          this.result = '';
+          const n = this.labels.length;
+          const winner = Math.floor(Math.random() * n);
+          const seg = 360 / n;
+          const extra = 360 * (5 + Math.floor(Math.random() * 3));
+          const currentMod = ((this.rotation % 360) + 360) % 360;
+          // 轉盤用 transform: rotate(-rotation)；指針在左邊（從 12 點順時針 270°）
+          const POINTER_DEG = 270;
+          const targetMod = (((winner + 0.5) * seg - POINTER_DEG) % 360 + 360) % 360;
+          let delta = targetMod - currentMod;
+          if (delta < 0) delta += 360;
+          this.rotation += extra + delta;
+          window.setTimeout(() => {
+            this.result = `今天就吃「${this.labels[winner+2]}」吧！`;
+            this.spinning = false;
+          }, 4000);
+        },
+      }));
+    });
+  </script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-dvh bg-slate-100 text-slate-800 antialiased pb-[env(safe-area-inset-bottom)]">
   <nav class="sticky top-0 z-50 bg-sky-300 text-white shadow-sm" x-data="{ open: false }" @keydown.window.escape="open = false">
     <div class="mx-auto max-w-5xl px-3 sm:px-4">
       <div class="flex min-h-14 items-center justify-between gap-2 py-2 sm:min-h-16 sm:py-3">
-        <a class="shrink-0 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl" href="{% url 'posts:feed' %}">等等吃啥</a>
+        <a class="shrink-0 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl" href="{% url 'posts:feed' %}"><i class="fa-solid fa-utensils mr-1.5 sm:mr-3" aria-hidden="true"></i>等等吃啥</a>
 
         {# 桌面版導覽 #}
         <div class="hidden items-center gap-3 text-base font-semibold md:flex md:gap-4 md:text-lg">
@@ -73,6 +112,92 @@
       </div>
     </div>
   </nav>
+
+  {# 吃什麼轉盤：圓形按鈕 + 彈窗 #}
+  <div x-data="eatWhatWheel()" @keydown.escape.window="open = false">
+    <button
+      type="button"
+      class="fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg ring-2 ring-amber-200/80 transition hover:scale-105 hover:bg-amber-400 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 sm:bottom-8 sm:right-8"
+      aria-haspopup="dialog"
+      :aria-expanded="open"
+      aria-label="開啟今天吃什麼轉盤"
+      @click="open = true"
+    >
+      <i class="fa-solid fa-dharmachakra text-2xl" aria-hidden="true"></i>
+    </button>
+
+    <div
+      class="fixed inset-0 z-[70] flex items-end justify-center p-4 sm:items-center"
+      x-show="open"
+      x-cloak
+      x-transition:enter="transition ease-out duration-200"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      x-transition:leave="transition ease-in duration-150"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wheel-dialog-title"
+    >
+      <div class="absolute inset-0 bg-slate-900/50" @click="open = false" aria-hidden="true"></div>
+      <div class="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <h2 id="wheel-dialog-title" class="text-xl font-bold text-slate-800">今天吃什麼？</h2>
+          <button
+            type="button"
+            class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+            aria-label="關閉"
+            @click="open = false"
+          >
+            <i class="fa-solid fa-xmark text-xl" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="mx-auto flex w-full max-w-[320px] items-center justify-center gap-1 sm:gap-2">
+          <div class="pointer-events-none shrink-0 self-center" aria-hidden="true">
+            <div class="h-0 w-0 border-y-[12px] border-y-transparent border-l-[18px] border-l-rose-600 drop-shadow"></div>
+          </div>
+          <div class="relative min-w-0 flex-1 max-w-[280px]">
+          <div class="rounded-full p-1.5 shadow-inner ring-4 ring-slate-100">
+            <div class="relative mx-auto aspect-square w-full overflow-hidden rounded-full">
+              <div
+                class="absolute inset-0 origin-center transition-transform duration-[4000ms] ease-[cubic-bezier(0.17,0.67,0.12,0.99)] will-change-transform"
+                :style="{ transform: `rotate(-${rotation}deg)` }"
+              >
+                <div class="absolute inset-0 rounded-full" :style="{ background: wheelGradient() }"></div>
+                <template x-for="(label, i) in labels" :key="i">
+                  <span
+                    class="pointer-events-none absolute left-1/2 top-1/2 w-[5.5rem] text-center text-[11px] font-bold leading-tight text-white drop-shadow [text-shadow:0_1px_2px_rgb(0_0_0/0.55)] sm:w-24 sm:text-sm"
+                    :style="`transform: translate(-50%, -50%) rotate(${i * (360 / labels.length) + (360 / labels.length) / 2 - 90}deg) translateY(-100px)`"
+                    x-text="label"
+                  ></span>
+                </template>
+              </div>
+              <div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                <div class="h-14 w-14 rounded-full bg-white/95 shadow-md ring-2 ring-slate-200/90 sm:h-16 sm:w-16"></div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        <p class="mt-4 min-h-[1.75rem] text-center text-base font-semibold text-sky-700 sm:text-lg" x-text="result"></p>
+
+        <div class="mt-5 flex justify-center">
+          <button
+            type="button"
+            class="rounded-xl bg-sky-500 px-8 py-3 text-base font-semibold text-white shadow hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="spinning"
+            @click="spin()"
+          >
+            <span x-show="!spinning">開始轉！</span>
+            <span x-show="spinning" x-cloak>轉動中…</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <main class="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
     {% if messages %}
