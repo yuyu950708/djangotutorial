@@ -19,6 +19,10 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+admin.site.site_header = "等等吃啥 管理後台"
+admin.site.site_title = "等等吃啥 Admin"
+admin.site.index_title = "系統管理"
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("ckeditor/", include("mysite.ckeditor_urls")),

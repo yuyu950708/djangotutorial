@@ -10,10 +10,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+try:
+    from dotenv import load_dotenv
+
+    # utf-8-sig：避免 Windows 儲存 .env 時帶 BOM，導致讀不到 GEMINI_API_KEY
+    load_dotenv(BASE_DIR / ".env", encoding="utf-8-sig")
+except ImportError:
+    pass
 
 
 # Quick-start development settings - unsuitable for production
@@ -31,9 +40,9 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    "polls.apps.PollsConfig",  # 典型的 Django 应用配置
     "accounts.apps.AccountsConfig",
     "posts.apps.PostsConfig",
+    "import_export",
     "js_asset",
     "ckeditor",
     "ckeditor_uploader",
@@ -77,13 +86,32 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#
+# Default: SQLite (no MariaDB required). For MariaDB, set env USE_MYSQL=1 and start the server.
+_USE_MYSQL = os.environ.get("USE_MYSQL", "").strip().lower() in ("1", "true", "yes")
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if _USE_MYSQL:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": "eat_what",
+            "USER": "root",
+            "PASSWORD": "root",
+            "HOST": "127.0.0.1",
+            "PORT": "3308",
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
@@ -127,9 +155,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'accounts.User'
 
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'posts:feed'
+
+# Google Gemini（美食助理）：金鑰來源 https://aistudio.google.com/app/apikey
+GEMINI_API_KEY = (
+    os.environ.get("GEMINI_API_KEY", "").strip()
+    or os.environ.get("GOOGLE_API_KEY", "").strip()
+)
+# 例如 gemini-2.0-flash、gemini-1.5-flash（需帳戶可用模型）
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
 # CKEditor（富文字 + 圖片上傳）
 CKEDITOR_UPLOAD_PATH = "ckeditor_uploads/"

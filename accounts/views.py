@@ -1,15 +1,20 @@
 from django.contrib.auth import login
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth.views import (
     LoginView as DjangoLoginView,
     LogoutView as DjangoLogoutView,
 )
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ProfileEditForm, RegisterForm, UsernameOrEmailAuthenticationForm
 from .models import Profile
 
 from posts.models import Post
+from posts.models import Follow
+
+User = get_user_model()
 
 
 class LoginView(DjangoLoginView):
@@ -54,8 +59,28 @@ def profile_detail(request, username):
     user = get_object_or_404(User, username=username)
     profile, _ = Profile.objects.get_or_create(user=user)
     posts = Post.objects.filter(author=user).order_by("-created_at")[:20]
+    is_following = False
+    if request.user.is_authenticated:
+        is_following = Follow.objects.filter(follower=request.user, following=user).exists()
     return render(
         request,
         "accounts/profile_detail.html",
-        {"profile_user": user, "profile": profile, "posts": posts},
+        {"profile_user": user, "profile": profile, "posts": posts, "is_following": is_following},
     )
+
+
+@login_required(login_url="accounts:login")
+def follow_toggle(request, username):
+    target = get_object_or_404(User, username=username)
+    if target == request.user:
+        messages.error(request, "不能追蹤自己。")
+        return redirect("accounts:profile_detail", username=target.username)
+
+    relation = Follow.objects.filter(follower=request.user, following=target).first()
+    if relation:
+        relation.delete()
+        messages.info(request, "已取消追蹤。")
+    else:
+        Follow.objects.get_or_create(follower=request.user, following=target)
+        messages.success(request, "已追蹤。")
+    return redirect("accounts:profile_detail", username=target.username)

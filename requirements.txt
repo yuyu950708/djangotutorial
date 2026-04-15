@@ -1,6 +1,9 @@
 Django>=5.2,<7
+python-dotenv>=1.0
 Pillow>=10
 django-ckeditor>=6.7
 django-js-asset>=2.0
 bleach>=6
 tinycss2>=1.4
+PyMySQL>=1.1
+django-import-export>=4.3

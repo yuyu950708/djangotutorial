@@ -14,7 +14,7 @@
           <div class="min-w-0 flex-1 text-center sm:text-left">
             <h1 class="break-words text-xl font-semibold sm:text-xl">{{ profile_user.username }}</h1>
             {% if profile.bio %}<p class="mt-1 break-words text-sm text-slate-500">{{ profile.bio }}</p>{% endif %}
-            {% if profile.website %}<a href="{{ profile.website }}" target="_blank" rel="noopener" class="mt-2 inline-block break-all text-sm text-sky-600 hover:underline">網站</a>{% endif %}
+            {% if profile.dietary_preference %}<p class="mt-2 text-sm text-sky-600">體質紀錄：{{ profile.dietary_preference }}</p>{% endif %}
           </div>
         </div>
         {% if user == profile_user %}
