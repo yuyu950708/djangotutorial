@@ -12,6 +12,15 @@
   .post-compose .cke_bottom {
     display: none;
   }
+  .post-compose-details > summary {
+    list-style: none;
+  }
+  .post-compose-details > summary::-webkit-details-marker {
+    display: none;
+  }
+  .post-compose-details[open] .compose-chevron {
+    transform: rotate(180deg);
+  }
 </style>
 {% endblock %}
 
@@ -53,57 +62,73 @@
   </div>
 
   {% if user.is_authenticated and not search_query %}
-    <div class="post-compose mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
-      <form action="{% url 'posts:feed' %}" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-          <div class="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{{ form.non_field_errors }}</div>
-        {% endif %}
-        <div class="mb-3">
-          <label for="{{ form.title.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">標題</label>
-          {{ form.title }}
-          {% if form.title.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.title.errors.0 }}</p>{% endif %}
-        </div>
-        <div class="mb-3 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label for="{{ form.category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">分類</label>
-            {{ form.category }}
-            {% if form.category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.category.errors.0 }}</p>{% endif %}
-          </div>
-          <div>
-            <label for="{{ form.new_category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增分類</label>
-            {{ form.new_category }}
-            {% if form.new_category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.new_category.errors.0 }}</p>{% endif %}
+    <details class="post-compose-details mb-4 overflow-hidden rounded-xl bg-white shadow" {% if form.errors %}open{% endif %}>
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:px-5">
+        <div class="flex min-w-0 items-center gap-3">
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+          </span>
+          <div class="min-w-0 text-left">
+            <p class="font-semibold text-slate-800">發表貼文</p>
+            <p class="text-sm text-slate-500">點一下展開表單</p>
           </div>
         </div>
-        <div class="mb-3 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label for="{{ form.tags.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">標籤</label>
-            {{ form.tags }}
-            {% if form.tags.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.tags.errors.0 }}</p>{% endif %}
+        <span class="compose-chevron shrink-0 text-slate-400 transition-transform duration-200" aria-hidden="true">
+          <i class="fa-solid fa-chevron-down"></i>
+        </span>
+      </summary>
+      <div class="post-compose border-t border-slate-100 px-4 pb-4 pt-1 sm:px-5 sm:pb-5">
+        <form action="{% url 'posts:feed' %}" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{{ form.non_field_errors }}</div>
+          {% endif %}
+          <div class="mb-3">
+            <label for="{{ form.title.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">標題</label>
+            {{ form.title }}
+            {% if form.title.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.title.errors.0 }}</p>{% endif %}
           </div>
-          <div>
-            <label for="{{ form.new_tags.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增標籤</label>
-            {{ form.new_tags }}
-            {% if form.new_tags.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.new_tags.errors.0 }}</p>{% endif %}
-            <p class="mt-1 text-xs text-slate-500">{{ form.new_tags.help_text }}</p>
+          <div class="mb-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label for="{{ form.category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">分類</label>
+              {{ form.category }}
+              {% if form.category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.category.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+              <label for="{{ form.new_category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增分類</label>
+              {{ form.new_category }}
+              {% if form.new_category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.new_category.errors.0 }}</p>{% endif %}
+            </div>
           </div>
-        </div>
-        <div class="mb-3 min-w-0">
-          <label class="mb-1 block text-sm font-medium text-slate-600">發布貼文</label>
-          <div class="w-full max-w-full min-w-0 overflow-x-auto">
-            {{ form.content }}
+          <div class="mb-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label for="{{ form.tags.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">標籤</label>
+              {{ form.tags }}
+              {% if form.tags.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.tags.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+              <label for="{{ form.new_tags.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增標籤</label>
+              {{ form.new_tags }}
+              {% if form.new_tags.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.new_tags.errors.0 }}</p>{% endif %}
+              <p class="mt-1 text-xs text-slate-500">{{ form.new_tags.help_text }}</p>
+            </div>
           </div>
-          {% if form.content.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.content.errors.0 }}</p>{% endif %}
-        </div>
-        <div class="mb-4">
-          <label for="{{ form.image.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">圖片（可選）</label>
-          {{ form.image }}
-          {% if form.image.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.image.errors.0 }}</p>{% endif %}
-        </div>
-        <button type="submit" class="min-h-11 w-full rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-600 sm:w-auto">發布</button>
-      </form>
-    </div>
+          <div class="mb-3 min-w-0">
+            <label class="mb-1 block text-sm font-medium text-slate-600">發布貼文</label>
+            <div class="w-full max-w-full min-w-0 overflow-x-auto">
+              {{ form.content }}
+            </div>
+            {% if form.content.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.content.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="mb-4">
+            <label for="{{ form.image.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">圖片（可選）</label>
+            {{ form.image }}
+            {% if form.image.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.image.errors.0 }}</p>{% endif %}
+          </div>
+          <button type="submit" class="min-h-11 w-full rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-600 sm:w-auto">發布</button>
+        </form>
+      </div>
+    </details>
   {% endif %}
 
   <div class="space-y-3 sm:space-y-4">
