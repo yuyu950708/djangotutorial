@@ -5,6 +5,7 @@ from . import views
 app_name = "posts"
 
 urlpatterns = [
+    path("ai-chat/", views.ai_chat, name="ai_chat"),
     path("", views.feed, name="feed"),
     path("collections/", views.collections_list, name="collections_list"),
     path("<int:pk>/", views.post_detail, name="post_detail"),

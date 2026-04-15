@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -6,6 +7,7 @@
   <title>{% block title %}等等吃啥{% endblock %}</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{% static 'js/food_ai_assistant.js' %}"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
   <style>html body [x-cloak] { display: none; }</style>
   <script>
@@ -39,7 +41,7 @@
           if (delta < 0) delta += 360;
           this.rotation += extra + delta;
           window.setTimeout(() => {
-            this.result = `今天就吃「${this.labels[winner+2]}」吧！`;
+            this.result = `今天就吃「${this.labels[winner + 2]}」吧！`;
             this.spinning = false;
           }, 4000);
         },
@@ -48,19 +50,22 @@
   </script>
   {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-dvh bg-slate-100 text-slate-800 antialiased pb-[env(safe-area-inset-bottom)]">
+<body
+  class="min-h-dvh bg-slate-100 text-slate-800 antialiased pb-[env(safe-area-inset-bottom)]"
+  {% if user.is_authenticated %}data-ai-chat-url="{% url 'posts:ai_chat' %}"{% endif %}
+>
   <nav class="sticky top-0 z-50 bg-sky-300 text-white shadow-sm" x-data="{ open: false }" @keydown.window.escape="open = false">
     <div class="mx-auto max-w-5xl px-3 sm:px-4">
       <div class="flex min-h-14 items-center justify-between gap-2 py-2 sm:min-h-16 sm:py-3">
-        <a class="shrink-0 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl" href="{% url 'posts:feed' %}"><i class="fa-solid fa-utensils mr-1.5 sm:mr-3" aria-hidden="true"></i>等等吃啥</a>
+        <a class="shrink-0 text-2xl font-bold tracking-tight sm:text-3xl md:text-2xl flex items-center" href="{% url 'posts:feed' %}"><i class="fa-solid fa-utensils mr-1.5 sm:mr-3 md:text-4xl" aria-hidden="true"></i>等等吃啥</a>
 
         {# 桌面版導覽 #}
         <div class="hidden items-center gap-3 text-base font-semibold md:flex md:gap-4 md:text-lg">
           <a class="rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'posts:feed' %}">首頁</a>
           {% if user.is_authenticated %}
             <a class="rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'posts:collections_list' %}">我的收藏</a>
-            <a class="max-w-[10rem] truncate rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'accounts:profile_detail' user.username %}" title="{{ user.username }}">{{ user.username }}</a>
             <a class="rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'accounts:profile_edit' %}">編輯檔案</a>
+            <a class="max-w-[10rem] truncate rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'accounts:profile_detail' user.username %}" title="{{ user.username }}">{{ user.username }}</a>
             <a class="rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25" href="{% url 'accounts:logout' %}">登出</a>
           {% else %}
             <a class="rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'accounts:login' %}">登入</a>
@@ -198,6 +203,10 @@
       </div>
     </div>
   </div>
+
+  {% if user.is_authenticated %}
+  {% include "partials/food_ai_assistant.html" %}
+  {% endif %}
 
   <main class="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
     {% if messages %}

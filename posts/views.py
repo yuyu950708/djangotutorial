@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import timedelta
 
@@ -6,16 +7,17 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from urllib.parse import urlencode
-import re
 
 from accounts.models import Profile
 
+from .ai_chat import get_assistant_reply
 from .forms import CategoryForm, PostEditForm, PostForm, TagForm
 from .models import Category, Collection, Comment, Like, Post, SearchLog, Tag
 
@@ -308,3 +310,28 @@ def collections_list(request):
             "paginator": paginator,
         },
     )
+
+
+@require_POST
+def ai_chat(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "請先登入後再使用 AI 小幫手。"}, status=401)
+    message = (request.POST.get("message") or "").strip()[:4000]
+    image = request.FILES.get("image")
+    history_raw = request.POST.get("history") or "[]"
+    try:
+        history = json.loads(history_raw)
+    except json.JSONDecodeError:
+        history = []
+
+    if image and image.size > 5 * 1024 * 1024:
+        return JsonResponse({"error": "圖片請小於 5MB。"}, status=400)
+    if image:
+        ct = (getattr(image, "content_type", "") or "").lower()
+        if ct and ct not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
+            return JsonResponse({"error": "請上傳 JPG、PNG、GIF 或 WebP 圖片。"}, status=400)
+    if not message and not image:
+        return JsonResponse({"error": "請輸入文字或上傳圖片。"}, status=400)
+
+    reply = get_assistant_reply(message=message, image=image, history=history)
+    return JsonResponse({"reply": reply})
