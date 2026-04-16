@@ -88,30 +88,18 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 #
 # Default: SQLite (no MariaDB required). For MariaDB, set env USE_MYSQL=1 and start the server.
-_USE_MYSQL = os.environ.get("USE_MYSQL", "").strip().lower() in ("1", "true", "yes")
+# _USE_MYSQL = os.environ.get("USE_MYSQL", "").strip().lower() in ("1", "true", "yes")
 
-if _USE_MYSQL:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": "eat_what",
-            "USER": "root",
-            "PASSWORD": "root",
-            "HOST": "127.0.0.1",
-            "PORT": "3308",
-            "OPTIONS": {
-                "charset": "utf8mb4",
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "eat_what",
+        "USER": "root",
+        "PASSWORD": "root",
+        "HOST": "127.0.0.1",
+        "PORT": "3308",
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 
 # Password validation
@@ -167,6 +155,17 @@ GEMINI_API_KEY = (
 )
 # 例如 gemini-2.0-flash、gemini-1.5-flash（需帳戶可用模型）
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+
+# NVIDIA Integrate（OpenAI 風格 Chat Completions）
+NVIDIA_API_KEY = (
+    os.environ.get("NVIDIA_API_KEY", "").strip()
+    # Back-compat：main.py / 教學常用 generic `api_key`
+    or os.environ.get("api_key", "").strip()
+)
+NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "qwen/qwen3.5-397b-a17b").strip()
+NVIDIA_INVOKE_URL = os.environ.get(
+    "NVIDIA_INVOKE_URL", "https://integrate.api.nvidia.com/v1/chat/completions"
+).strip()
 
 # CKEditor（富文字 + 圖片上傳）
 CKEDITOR_UPLOAD_PATH = "ckeditor_uploads/"
