@@ -156,6 +156,17 @@ GEMINI_API_KEY = (
 # 例如 gemini-2.0-flash、gemini-1.5-flash（需帳戶可用模型）
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
+# NVIDIA Integrate（OpenAI 風格 Chat Completions）
+NVIDIA_API_KEY = (
+    os.environ.get("NVIDIA_API_KEY", "").strip()
+    # Back-compat：main.py / 教學常用 generic `api_key`
+    or os.environ.get("api_key", "").strip()
+)
+NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "qwen/qwen3.5-397b-a17b").strip()
+NVIDIA_INVOKE_URL = os.environ.get(
+    "NVIDIA_INVOKE_URL", "https://integrate.api.nvidia.com/v1/chat/completions"
+).strip()
+
 # CKEditor（富文字 + 圖片上傳）
 CKEDITOR_UPLOAD_PATH = "ckeditor_uploads/"
 CKEDITOR_IMAGE_BACKEND = "pillow"
