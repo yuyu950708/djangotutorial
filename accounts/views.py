@@ -11,8 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import ProfileEditForm, RegisterForm, UsernameOrEmailAuthenticationForm
 from .models import Profile
 
-from posts.models import Post
-from posts.models import Follow
+from posts.models import Follow, Post, PostComment
 
 User = get_user_model()
 
@@ -59,13 +58,24 @@ def profile_detail(request, username):
     user = get_object_or_404(User, username=username)
     profile, _ = Profile.objects.get_or_create(user=user)
     posts = Post.objects.filter(author=user).order_by("-created_at")[:20]
+    recent_comments = (
+        PostComment.objects.filter(author=user)
+        .select_related("post")
+        .order_by("-created_at")[:20]
+    )
     is_following = False
     if request.user.is_authenticated:
         is_following = Follow.objects.filter(follower=request.user, following=user).exists()
     return render(
         request,
         "accounts/profile_detail.html",
-        {"profile_user": user, "profile": profile, "posts": posts, "is_following": is_following},
+        {
+            "profile_user": user,
+            "profile": profile,
+            "posts": posts,
+            "recent_comments": recent_comments,
+            "is_following": is_following,
+        },
     )
 
 

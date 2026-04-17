@@ -31,5 +31,19 @@
     {% empty %}
     <p class="text-sm text-slate-500 sm:text-base">尚無貼文。</p>
     {% endfor %}
+
+    <h2 class="mb-3 mt-6 text-base font-semibold sm:text-lg">留言紀錄</h2>
+    {% for comment in recent_comments %}
+    <article class="mb-3 rounded-xl bg-white p-4 shadow sm:p-5">
+      <p class="mb-2 break-words text-sm text-slate-700">{{ comment.content }}</p>
+      <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
+        <span>{{ comment.created_at|timesince }} 前</span>
+        <span>·</span>
+        <a href="{% url 'posts:post_detail' comment.post_id %}" class="font-medium text-sky-600 hover:underline">查看貼文</a>
+      </div>
+    </article>
+    {% empty %}
+    <p class="text-sm text-slate-500 sm:text-base">尚無留言紀錄。</p>
+    {% endfor %}
 </div>
 {% endblock %}
