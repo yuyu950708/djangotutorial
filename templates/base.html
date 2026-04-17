@@ -12,48 +12,67 @@
   <style>html body [x-cloak] { display: none; }</style>
   <script>
     document.addEventListener('alpine:init', () => {
-      Alpine.data('eatWhatWheel', () => ({
-        open: false,
-        rotation: 0,
-        spinning: false,
-        labels: ['中式', '日式', '美式', '火鍋', '便當', '拉麵', '咖啡', '隨便'],
-        result: '',
-        wheelGradient() {
-          const n = this.labels.length;
-          const seg = 360 / n;
-          const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#22d3ee', '#818cf8', '#c084fc'];
-          const stops = this.labels.map((_, i) => `${colors[i % colors.length]} ${i * seg}deg ${(i + 1) * seg}deg`).join(', ');
-          return `conic-gradient(from -90deg, ${stops})`;
-        },
-        spin() {
-          if (this.spinning) return;
-          this.spinning = true;
-          this.result = '';
-          const n = this.labels.length;
-          const winner = Math.floor(Math.random() * n);
-          const seg = 360 / n;
-          const extra = 360 * (5 + Math.floor(Math.random() * 3));
-          const currentMod = ((this.rotation % 360) + 360) % 360;
-          // 轉盤用 transform: rotate(-rotation)；指針在左邊（從 12 點順時針 270°）
-          const POINTER_DEG = 270;
-          const targetMod = (((winner + 0.5) * seg - POINTER_DEG) % 360 + 360) % 360;
-          let delta = targetMod - currentMod;
-          if (delta < 0) delta += 360;
-          this.rotation += extra + delta;
-          window.setTimeout(() => {
-            this.result = `今天就吃「${this.labels[winner + 2]}」吧！`;
-            this.spinning = false;
-          }, 4000);
-        },
-      }));
+      Alpine.data('eatWhatWheel', () => {
+        const el = document.getElementById('wheel-tag-items');
+        let tags = [];
+        if (el && el.textContent) {
+          try {
+            tags = JSON.parse(el.textContent);
+          } catch (e) {
+            tags = [];
+          }
+        }
+        const feedListUrl = (document.body.dataset.feedListUrl || '/').replace(/\/?$/, '/');
+        return {
+          open: false,
+          rotation: 0,
+          spinning: false,
+          tags,
+          feedListUrl,
+          result: '',
+          wheelGradient() {
+            const n = this.tags.length;
+            if (!n) return 'conic-gradient(from -90deg, #94a3b8 0deg 360deg)';
+            const seg = 360 / n;
+            const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#22d3ee', '#818cf8', '#c084fc'];
+            const stops = this.tags.map((_, i) => `${colors[i % colors.length]} ${i * seg}deg ${(i + 1) * seg}deg`).join(', ');
+            return `conic-gradient(from -90deg, ${stops})`;
+          },
+          spin() {
+            if (this.spinning || !this.tags.length) return;
+            this.spinning = true;
+            this.result = '';
+            const n = this.tags.length;
+            const winner = Math.floor(Math.random() * n);
+            const seg = 360 / n;
+            const extra = 360 * (5 + Math.floor(Math.random() * 3));
+            const currentMod = ((this.rotation % 360) + 360) % 360;
+            const POINTER_DEG = 270;
+            const targetMod = (((winner + 0.5) * seg - POINTER_DEG) % 360 + 360) % 360;
+            let delta = targetMod - currentMod;
+            if (delta < 0) delta += 360;
+            this.rotation += extra + delta;
+            const picked = this.tags[winner];
+            window.setTimeout(() => {
+              this.result = `抽到「${picked.name}」，正在帶您去看貼文…`;
+              this.spinning = false;
+              const u = new URL(this.feedListUrl, window.location.origin);
+              u.searchParams.set('tag', String(picked.id));
+              window.location.assign(u.pathname + u.search + u.hash);
+            }, 4000);
+          },
+        };
+      });
     });
   </script>
   {% block extra_head %}{% endblock %}
 </head>
 <body
   class="min-h-dvh bg-slate-100 text-slate-800 antialiased pb-[env(safe-area-inset-bottom)]"
+  data-feed-list-url="{% url 'posts:feed' %}"
   {% if user.is_authenticated %}data-ai-chat-url="{% url 'posts:ai_chat' %}"{% endif %}
 >
+  {{ wheel_tag_items|json_script:"wheel-tag-items" }}
   <nav class="sticky top-0 z-50 bg-sky-300 text-white shadow-sm" x-data="{ open: false }" @keydown.window.escape="open = false">
     <div class="mx-auto max-w-5xl px-3 sm:px-4">
       <div class="flex min-h-14 items-center justify-between gap-2 py-2 sm:min-h-16 sm:py-3">
@@ -123,14 +142,14 @@
     </div>
   </nav>
 
-  {# 吃什麼轉盤：圓形按鈕 + 彈窗 #}
+  {# 標籤轉盤：圓形按鈕 + 彈窗 #}
   <div x-data="eatWhatWheel()" @keydown.escape.window="open = false">
     <button
       type="button"
       class="fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg ring-2 ring-amber-200/80 transition hover:scale-105 hover:bg-amber-400 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 sm:bottom-8 sm:right-8"
       aria-haspopup="dialog"
       :aria-expanded="open"
-      aria-label="開啟今天吃什麼轉盤"
+      aria-label="開啟標籤轉盤"
       @click="open = true"
     >
       <i class="fa-solid fa-dharmachakra text-2xl" aria-hidden="true"></i>
@@ -153,7 +172,7 @@
       <div class="absolute inset-0 bg-slate-900/50" @click="open = false" aria-hidden="true"></div>
       <div class="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
         <div class="mb-4 flex items-start justify-between gap-3">
-          <h2 id="wheel-dialog-title" class="text-xl font-bold text-slate-800">今天吃什麼？</h2>
+          <h2 id="wheel-dialog-title" class="text-xl font-bold text-slate-800">隨機標籤轉轉</h2>
           <button
             type="button"
             class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
@@ -176,11 +195,11 @@
                 :style="{ transform: `rotate(-${rotation}deg)` }"
               >
                 <div class="absolute inset-0 rounded-full" :style="{ background: wheelGradient() }"></div>
-                <template x-for="(label, i) in labels" :key="i">
+                <template x-for="(t, i) in tags" :key="t.id">
                   <span
                     class="pointer-events-none absolute left-1/2 top-1/2 w-[5.5rem] text-center text-[11px] font-bold leading-tight text-white drop-shadow [text-shadow:0_1px_2px_rgb(0_0_0/0.55)] sm:w-24 sm:text-sm"
-                    :style="`transform: translate(-50%, -50%) rotate(${i * (360 / labels.length) + (360 / labels.length) / 2 - 90}deg) translateY(-100px)`"
-                    x-text="label"
+                    :style="`transform: translate(-50%, -50%) rotate(${i * (360 / tags.length) + (360 / tags.length) / 2 - 90}deg) translateY(-100px)`"
+                    x-text="t.name"
                   ></span>
                 </template>
               </div>
@@ -192,13 +211,16 @@
           </div>
         </div>
 
-        <p class="mt-4 min-h-[1.75rem] text-center text-base font-semibold text-sky-700 sm:text-lg" x-text="result"></p>
+        <p class="mt-4 min-h-[1.75rem] text-center text-sm text-slate-600" x-show="!tags.length">
+          尚無已使用於貼文的標籤，發文時加上標籤後即可使用轉盤。
+        </p>
+        <p class="mt-4 min-h-[1.75rem] text-center text-base font-semibold text-sky-700 sm:text-lg" x-show="tags.length" x-text="result"></p>
 
         <div class="mt-5 flex justify-center">
           <button
             type="button"
             class="rounded-xl bg-sky-500 px-8 py-3 text-base font-semibold text-white shadow hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="spinning"
+            :disabled="spinning || !tags.length"
             @click="spin()"
           >
             <span x-show="!spinning">開始轉！</span>
