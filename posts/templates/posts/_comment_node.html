@@ -1,6 +1,6 @@
-<div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+<div class="rounded-lg border border-slate-200 bg-white px-3 py-2" x-data="{ editing: false }">
   <div class="flex items-start justify-between gap-2">
-    <div class="flex min-w-0 items-start gap-2">
+    <div class="flex min-w-0 items-start gap-2 flex-1">
       <a href="{% url 'accounts:profile_detail' node.author.username %}" class="mt-0.5 shrink-0">
         {% if node.author.profile.avatar %}
           <img src="{{ node.author.profile.avatar.url }}" alt="" class="h-8 w-8 rounded-full object-cover ring-1 ring-slate-200">
@@ -11,97 +11,95 @@
         {% endif %}
       </a>
       <div class="min-w-0 text-sm">
-      <strong class="text-slate-800">{{ node.author.username }}</strong>
-      <span class="ml-2 text-xs text-slate-400">{{ node.created_at|timesince }} 前</span>
-      {% if node.parent_id %}
-        <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">回覆</span>
-      {% endif %}
-      {% if node.is_pinned %}
-        <span class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700">置頂</span>
-      {% endif %}
-      {% if node.is_locked %}
-        <span class="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] text-rose-700">鎖定</span>
-      {% endif %}
+        <strong class="text-slate-800">{{ node.author.username }}</strong>
+        <span class="ml-2 text-xs text-slate-400">{{ node.created_at|timesince }} 前</span>
+        {% if node.parent_id %}
+          <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">回覆</span>
+        {% endif %}
+        {% if node.is_pinned %}
+          <span class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700">置頂</span>
+        {% endif %}
+        {% if node.is_locked %}
+          <span class="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] text-rose-700">鎖定</span>
+        {% endif %}
       </div>
     </div>
-  </div>
 
-  <p class="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{{ node.content }}</p>
-
-  {% if user.is_authenticated %}
-    <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-      <span data-comment-like-count>{{ node.like_count|default:0 }} 讚</span>
-      <form method="post" action="{% url 'posts:comment_like_toggle' post.pk node.id %}" class="inline js-comment-like-form">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button
-          type="submit"
-          data-comment-like-button
-          class="rounded-md border border-rose-200 bg-rose-50/80 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
-        >
-          {% if node.id in liked_comment_ids %}取消按讚{% else %}按讚{% endif %}
+    {% if user.is_authenticated and user.id == node.author_id %}
+      <div class="flex items-center gap-3 shrink-0">
+        <button @click="editing = true" class="text-xs font-medium text-slate-400 hover:text-sky-600 transition-colors">
+          編輯
         </button>
-      </form>
-    </div>
-  {% else %}
-    <p class="mt-2 text-xs text-slate-400">{{ node.like_count|default:0 }} 讚</p>
-  {% endif %}
-
-  {% if user.is_authenticated and not node.is_locked %}
-    <details class="mt-2">
-      <summary class="cursor-pointer text-sm font-medium text-sky-600 hover:underline">回覆</summary>
-      <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-2">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <input type="hidden" name="parent_id" value="{{ node.id }}">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-          <input
-            type="text"
-            name="content"
-            class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm"
-            placeholder="回覆 {{ node.author.username }}..."
-            required
-            autocomplete="off"
-          >
-          <button
-            type="submit"
-            class="min-h-11 w-full shrink-0 rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-600 hover:bg-sky-50 sm:w-auto"
-          >送出</button>
-        </div>
-      </form>
-    </details>
-  {% endif %}
-
-  {% if user.is_authenticated and user.id == node.author_id %}
-    <div class="mt-2 flex flex-wrap items-center gap-2">
-      <details>
-        <summary class="cursor-pointer text-xs font-medium text-slate-600 hover:underline">編輯</summary>
-        <form action="{% url 'posts:comment_edit' post.pk node.id %}" method="post" class="mt-2">
+        <form method="post" action="{% url 'posts:comment_delete' post.pk node.id %}" class="inline" onsubmit="return confirm('確定要刪除這則留言嗎？');">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors">
+            刪除
+          </button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  <div x-show="!editing">
+    <p class="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{{ node.content }}</p>
+
+    {% if user.is_authenticated %}
+      <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <span data-comment-like-count>{{ node.like_count|default:0 }} 讚</span>
+        <form method="post" action="{% url 'posts:comment_like_toggle' post.pk node.id %}" class="inline js-comment-like-form">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button
+            type="submit"
+            data-comment-like-button
+            class="rounded-md border border-rose-200 bg-rose-50/80 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+          >
+            {% if node.id in liked_comment_ids %}取消按讚{% else %}按讚{% endif %}
+          </button>
+        </form>
+      </div>
+    {% else %}
+      <p class="mt-2 text-xs text-slate-400">{{ node.like_count|default:0 }} 讚</p>
+    {% endif %}
+
+    {% if user.is_authenticated and not node.is_locked %}
+      <details class="mt-2">
+        <summary class="cursor-pointer text-sm font-medium text-sky-600 hover:underline">回覆</summary>
+        <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input type="hidden" name="parent_id" value="{{ node.id }}">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
             <input
               type="text"
               name="content"
-              value="{{ node.content }}"
               class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm"
+              placeholder="回覆 {{ node.author.username }}..."
               required
               autocomplete="off"
             >
             <button
               type="submit"
-              class="min-h-11 w-full shrink-0 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
-            >儲存</button>
+              class="min-h-11 w-full shrink-0 rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-600 hover:bg-sky-50 sm:w-auto"
+            >送出</button>
           </div>
         </form>
       </details>
-      <form action="{% url 'posts:comment_delete' post.pk node.id %}" method="post" class="inline">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button type="submit" class="text-xs font-medium text-rose-600 hover:underline">刪除</button>
-      </form>
-    </div>
-  {% endif %}
+    {% endif %}
+  </div>
+
+  <div x-show="editing" x-cloak class="mt-2">
+    <form method="post" action="{% url 'posts:comment_edit' post.pk node.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <textarea name="content" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400" rows="2" required>{{ node.content }}</textarea>
+      <div class="mt-2 flex justify-end gap-2">
+        <button type="button" @click="editing = false" class="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">取消</button>
+        <button type="submit" class="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-600 transition-colors">儲存</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 {% if node.replies %}

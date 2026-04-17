@@ -95,6 +95,20 @@ def feed(request):
                 )
             )
 
+    # 首頁留言改為樹狀顯示：為每篇貼文組出 root -> replies 結構
+    for p in page_obj.object_list:
+        comments = list(p.post_comments.all().order_by("created_at"))
+        by_id = {c.id: c for c in comments}
+        for c in by_id.values():
+            c.replies = []
+        roots = []
+        for c in comments:
+            if c.parent_id and c.parent_id in by_id:
+                by_id[c.parent_id].replies.append(c)
+            else:
+                roots.append(c)
+        p.comment_roots = roots
+
     return render(
         request,
         "posts/feed.html",

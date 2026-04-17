@@ -203,47 +203,8 @@
           <hr class="my-4 border-slate-200">
 
           <div class="space-y-2">
-            {% for comment in post.post_comments.all %}
-              <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2">
-                <div class="flex items-start gap-2">
-                  <a href="{% url 'accounts:profile_detail' comment.author.username %}" class="mt-0.5 shrink-0">
-                    {% if comment.author.profile.avatar %}
-                      <img src="{{ comment.author.profile.avatar.url }}" alt="" class="h-8 w-8 rounded-full object-cover ring-1 ring-slate-200">
-                    {% else %}
-                      <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-400 text-xs font-semibold text-white ring-1 ring-slate-200">
-                        {{ comment.author.username|slice:":1"|upper }}
-                      </div>
-                    {% endif %}
-                  </a>
-                  <p class="break-words text-sm"><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
-                </div>
-                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span data-comment-like-count>{{ comment.like_count|default:0 }} 讚</span>
-                  <form method="post" action="{% url 'posts:comment_like_toggle' post.pk comment.id %}" class="inline js-comment-like-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button type="submit" data-comment-like-button class="rounded border border-rose-200 bg-white px-2 py-0.5 text-[11px] font-medium text-rose-700 hover:bg-rose-50">
-                      {% if comment.id in liked_comment_ids %}取消按讚{% else %}按讚{% endif %}
-                    </button>
-                  </form>
-                  {% if user.id == comment.author_id %}
-                    <details class="inline">
-                      <summary class="cursor-pointer font-medium text-slate-600 hover:underline">編輯</summary>
-                      <form action="{% url 'posts:comment_edit' post.pk comment.id %}" method="post" class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-stretch">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <input type="text" name="content" value="{{ comment.content }}" class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" required autocomplete="off">
-                        <button type="submit" class="min-h-11 w-full shrink-0 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">儲存</button>
-                      </form>
-                    </details>
-                    <form action="{% url 'posts:comment_delete' post.pk comment.id %}" method="post" class="inline">
-                      {% csrf_token %}
-                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                      <button type="submit" class="font-medium text-rose-600 hover:underline">刪除</button>
-                    </form>
-                  {% endif %}
-                </div>
-              </div>
+            {% for node in post.comment_roots %}
+              {% include "posts/_comment_node.html" with node=node %}
             {% empty %}
               <p class="text-sm text-slate-400">尚無留言</p>
             {% endfor %}
