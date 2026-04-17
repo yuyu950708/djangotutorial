@@ -92,12 +92,12 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "eat_what",
-        "USER": "root",
-        "PASSWORD": "root",
-        "HOST": "127.0.0.1",
-        "PORT": "3308",
+        "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.mysql").strip(),
+        "NAME": os.environ.get("DB_NAME", "eat_what").strip(),
+        "USER": os.environ.get("DB_USER", "").strip(),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "").strip(),
+        "HOST": os.environ.get("DB_HOST", "127.0.0.1").strip(),
+        "PORT": os.environ.get("DB_PORT", "3308").strip(),
     }
 }
 
