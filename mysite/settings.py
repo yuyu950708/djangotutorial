@@ -57,6 +57,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -74,6 +75,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -95,9 +97,9 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "eat_what",
         "USER": "root",
-        "PASSWORD": "root",
+        "PASSWORD": "1234",
         "HOST": "127.0.0.1",
-        "PORT": "3308",
+        "PORT": "3307",
     }
 }
 
@@ -121,9 +123,13 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hant'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Taipei'
+
+LANGUAGES = [
+    ('zh-hant', '繁體中文'),
+]
 
 USE_I18N = True
 
@@ -150,11 +156,11 @@ LOGIN_REDIRECT_URL = 'posts:feed'
 
 # Google Gemini（美食助理）：金鑰來源 https://aistudio.google.com/app/apikey
 GEMINI_API_KEY = (
-    os.environ.get("GEMINI_API_KEY", "").strip()
-    or os.environ.get("GOOGLE_API_KEY", "").strip()
+    os.environ.get("NVIDIA_API_KEY", "").strip()
+    or os.environ.get("api_key", "").strip()
 )
 # 例如 gemini-2.0-flash、gemini-1.5-flash（需帳戶可用模型）
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3-nano-30b-a3b")
 
 # NVIDIA Integrate（OpenAI 風格 Chat Completions）
 NVIDIA_API_KEY = (

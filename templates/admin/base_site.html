@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{# 強制夜晚模式：不載入 theme.js，避免使用者切換主題 #}
+{% block dark-mode-vars %}
+<link rel="stylesheet" href="{% static "admin/css/dark_mode.css" %}">
+<script>
+(function () {
+  document.documentElement.dataset.theme = "dark";
+  try { localStorage.setItem("theme", "dark"); } catch (e) {}
+})();
+</script>
+{% endblock %}
+
+{% block title %}{% if title %}{{ title }} | {% endif %}等等吃啥 後台{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/admin_custom.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+  <a href="{% url 'admin:index' %}">
+    <span class="eatwhat-admin-logo__mark" aria-hidden="true">🍽</span>
+    <span class="eatwhat-admin-logo__text">
+      等等吃啥
+    </span>
+    <span class="eatwhat-admin-logo__sub">管理後台</span>
+  </a>
+</h1>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<p class="eatwhat-admin-footer">
+  <a href="{% url 'posts:feed' %}">← 回到網站首頁</a>
+</p>
+{% endblock %}
