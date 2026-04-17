@@ -17,6 +17,24 @@
 
   <p class="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{{ node.content }}</p>
 
+  {% if user.is_authenticated %}
+    <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+      <span>{{ node.like_count|default:0 }} 讚</span>
+      <form method="post" action="{% url 'posts:comment_like_toggle' post.pk node.id %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button
+          type="submit"
+          class="rounded-md border border-rose-200 bg-rose-50/80 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+        >
+          {% if node.id in liked_comment_ids %}取消按讚{% else %}按讚{% endif %}
+        </button>
+      </form>
+    </div>
+  {% else %}
+    <p class="mt-2 text-xs text-slate-400">{{ node.like_count|default:0 }} 讚</p>
+  {% endif %}
+
   {% if user.is_authenticated and not node.is_locked %}
     <details class="mt-2">
       <summary class="cursor-pointer text-sm font-medium text-sky-600 hover:underline">回覆</summary>

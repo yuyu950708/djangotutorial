@@ -14,6 +14,7 @@ urlpatterns = [
     path("<int:pk>/like-toggle/", views.like_toggle, name="like_toggle"),
     path("<int:pk>/collect-toggle/", views.collect_toggle, name="collect_toggle"),
     path("<int:pk>/comment/", views.comment_create, name="comment_create"),
+    path("<int:pk>/comment/<int:comment_pk>/like-toggle/", views.comment_like_toggle, name="comment_like_toggle"),
     path("categories/", views.category_manage, name="category_manage"),
     path("categories/<int:pk>/delete/", views.category_delete, name="category_delete"),
     path("tags/", views.tag_manage, name="tag_manage"),

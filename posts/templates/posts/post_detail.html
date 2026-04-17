@@ -49,14 +49,14 @@
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto">
-            {% if is_liked %}已按讚{% else %}按讚{% endif %}
+            {% if is_liked %}取消按讚{% else %}按讚{% endif %}
           </button>
         </form>
         <form method="post" action="{% url 'posts:collect_toggle' post.pk %}" class="w-full sm:w-auto">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">
-            {% if is_collected %}已收藏{% else %}收藏{% endif %}
+            {% if is_collected %}取消收藏{% else %}收藏{% endif %}
           </button>
         </form>
       </div>

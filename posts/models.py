@@ -2,6 +2,7 @@ from ckeditor_uploader.fields import RichTextUploadingField
 from django.conf import settings
 from django.db import models
 from django.db.models import F
+from django.db.models.functions import Greatest
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
@@ -181,6 +182,7 @@ class PostComment(models.Model):
     )
     is_locked = models.BooleanField(default=False)
     is_pinned = models.BooleanField(default=False)
+    like_count = models.PositiveIntegerField(_("讚數"), default=0)
 
     class Meta:
         db_table = "post_comment"
@@ -193,6 +195,36 @@ class PostComment(models.Model):
 
     def __str__(self) -> str:
         return f"PostComment({self.author_id} -> {self.post_id})"
+
+
+class CommentLike(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="comment_likes",
+        verbose_name=_("使用者"),
+    )
+    comment = models.ForeignKey(
+        PostComment,
+        on_delete=models.CASCADE,
+        related_name="comment_likes",
+        verbose_name=_("留言"),
+    )
+    created_at = models.DateTimeField(_("建立時間"), auto_now_add=True)
+
+    class Meta:
+        db_table = "post_comment_likes"
+        verbose_name = _("留言讚")
+        verbose_name_plural = _("留言讚")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "comment"],
+                name="unique_comment_like_per_user_comment",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"CommentLike({self.user_id} -> comment {self.comment_id})"
 
 
 class Follow(models.Model):
@@ -267,4 +299,15 @@ def increment_like_count(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=Like)
 def decrement_like_count(sender, instance, **kwargs):
-    Post.objects.filter(pk=instance.post_id).update(like_count=models.functions.Greatest(F("like_count") - 1, 0))
+    Post.objects.filter(pk=instance.post_id).update(like_count=Greatest(F("like_count") - 1, 0))
+
+
+@receiver(post_save, sender=CommentLike)
+def increment_comment_like_count(sender, instance, created, **kwargs):
+    if created:
+        PostComment.objects.filter(pk=instance.comment_id).update(like_count=F("like_count") + 1)
+
+
+@receiver(post_delete, sender=CommentLike)
+def decrement_comment_like_count(sender, instance, **kwargs):
+    PostComment.objects.filter(pk=instance.comment_id).update(like_count=Greatest(F("like_count") - 1, 0))

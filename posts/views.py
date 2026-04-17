@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -19,7 +19,7 @@ from accounts.models import Profile
 
 from .ai_chat import get_assistant_reply
 from .forms import CategoryForm, PostEditForm, PostForm, TagForm
-from .models import Category, Collection, Like, Post, PostComment, SearchLog, Tag
+from .models import Category, Collection, CommentLike, Like, Post, PostComment, SearchLog, Tag
 
 
 def feed(request):
@@ -108,8 +108,29 @@ def feed(request):
             posts = posts.filter(tags__id=int(tag_id)).distinct()
         posts = posts.order_by("-created_at", "-id")
 
+    if request.user.is_authenticated:
+        posts = posts.annotate(
+            user_has_liked=Exists(Like.objects.filter(post_id=OuterRef("pk"), user_id=request.user.id)),
+            user_has_collected=Exists(
+                Collection.objects.filter(post_id=OuterRef("pk"), user_id=request.user.id)
+            ),
+        )
+
     paginator = Paginator(posts, 20)
     page_obj = paginator.get_page(page_number or 1)
+
+    liked_comment_ids = []
+    if request.user.is_authenticated:
+        comment_ids_on_page = []
+        for p in page_obj.object_list:
+            for c in p.post_comments.all():
+                comment_ids_on_page.append(c.id)
+        if comment_ids_on_page:
+            liked_comment_ids = list(
+                CommentLike.objects.filter(user=request.user, comment_id__in=comment_ids_on_page).values_list(
+                    "comment_id", flat=True
+                )
+            )
 
     return render(
         request,
@@ -125,6 +146,7 @@ def feed(request):
             "tags": Tag.objects.all(),
             "selected_category": category_id,
             "selected_tag": tag_id,
+            "liked_comment_ids": liked_comment_ids,
         },
     )
 
@@ -163,6 +185,25 @@ def collect_toggle(request, pk):
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
     return redirect("posts:feed")
+
+
+@login_required(login_url=settings.LOGIN_URL)
+def comment_like_toggle(request, pk, comment_pk):
+    post = get_object_or_404(Post, pk=pk)
+    comment = get_object_or_404(PostComment, pk=comment_pk, post_id=post.id)
+    if request.method != "POST":
+        return redirect("posts:post_detail", pk=pk)
+    existing = CommentLike.objects.filter(user=request.user, comment=comment).first()
+    if existing:
+        existing.delete()
+        messages.info(request, "已取消留言按讚。")
+    else:
+        CommentLike.objects.get_or_create(user=request.user, comment=comment)
+        messages.success(request, "已對留言按讚。")
+    next_url = (request.POST.get("next") or "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect("posts:post_detail", pk=pk)
 
 
 @login_required(login_url=settings.LOGIN_URL)
@@ -229,10 +270,24 @@ def post_detail(request, pk):
         else:
             roots.append(c)
 
+    liked_comment_ids = []
+    if request.user.is_authenticated:
+        liked_comment_ids = list(
+            CommentLike.objects.filter(user=request.user, comment__post_id=post.id).values_list(
+                "comment_id", flat=True
+            )
+        )
+
     return render(
         request,
         "posts/post_detail.html",
-        {"post": post, "is_liked": is_liked, "is_collected": is_collected, "comment_roots": roots},
+        {
+            "post": post,
+            "is_liked": is_liked,
+            "is_collected": is_collected,
+            "comment_roots": roots,
+            "liked_comment_ids": liked_comment_ids,
+        },
     )
 
 

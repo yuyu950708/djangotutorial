@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from import_export import resources
 from import_export.admin import ExportMixin
 
-from .models import Category, Collection, Comment, Follow, Like, Post, PostComment, SearchLog, Tag
+from .models import Category, Collection, Comment, CommentLike, Follow, Like, Post, PostComment, SearchLog, Tag
 
 
 class PostResource(resources.ModelResource):
@@ -88,9 +88,16 @@ class TagAdmin(admin.ModelAdmin):
     ordering = ("name",)
 
 
+@admin.register(CommentLike)
+class CommentLikeAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "comment", "created_at")
+    list_select_related = ("user", "comment", "comment__post")
+    ordering = ("-created_at",)
+
+
 @admin.register(PostComment)
 class PostCommentAdmin(admin.ModelAdmin):
-    list_display = ("id", "post", "author", "created_at")
+    list_display = ("id", "post", "author", "like_count", "created_at")
     list_filter = ("created_at",)
     search_fields = ("content", "author__username", "author__email", "post__title")
     autocomplete_fields = ("post", "author")

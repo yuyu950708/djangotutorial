@@ -191,12 +191,12 @@
             <form method="post" action="{% url 'posts:like_toggle' post.pk %}" class="w-full sm:w-auto">
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto">按讚 / 取消按讚</button>
+              <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto">{% if post.user_has_liked %}取消按讚{% else %}按讚{% endif %}</button>
             </form>
             <form method="post" action="{% url 'posts:collect_toggle' post.pk %}" class="w-full sm:w-auto">
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">收藏 / 取消收藏</button>
+              <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">{% if post.user_has_collected %}取消收藏{% else %}收藏{% endif %}</button>
             </form>
           </div>
 
@@ -204,7 +204,19 @@
 
           <div class="space-y-2">
             {% for comment in post.post_comments.all %}
-              <p class="break-words text-sm"><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
+              <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2">
+                <p class="break-words text-sm"><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
+                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span>{{ comment.like_count|default:0 }} 讚</span>
+                  <form method="post" action="{% url 'posts:comment_like_toggle' post.pk comment.id %}" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="rounded border border-rose-200 bg-white px-2 py-0.5 text-[11px] font-medium text-rose-700 hover:bg-rose-50">
+                      {% if comment.id in liked_comment_ids %}取消按讚{% else %}按讚{% endif %}
+                    </button>
+                  </form>
+                </div>
+              </div>
             {% empty %}
               <p class="text-sm text-slate-400">尚無留言</p>
             {% endfor %}
