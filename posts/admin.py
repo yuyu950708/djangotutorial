@@ -1,4 +1,5 @@
 import csv
+from django.contrib import admin
 # 可顯示中文
 from django.contrib import admin
 from django.db.models import Count
@@ -6,7 +7,7 @@ from django.http import HttpResponse
 from import_export import resources
 from import_export.admin import ExportMixin
 
-from .models import Category, Collection, Comment, Follow, Like, Post, SearchLog, Tag
+from .models import Category, Collection, Comment, Follow, Like, Post, PostComment, SearchLog, Tag
 
 
 class PostResource(resources.ModelResource):
@@ -16,7 +17,7 @@ class PostResource(resources.ModelResource):
 
 
 class CommentInline(admin.TabularInline):
-    model = Comment
+    model = PostComment
     fields = ("author", "content", "created_at")
     readonly_fields = ("created_at",)
     extra = 0
@@ -87,8 +88,8 @@ class TagAdmin(admin.ModelAdmin):
     ordering = ("name",)
 
 
-@admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
+@admin.register(PostComment)
+class PostCommentAdmin(admin.ModelAdmin):
     list_display = ("id", "post", "author", "created_at")
     list_filter = ("created_at",)
     search_fields = ("content", "author__username", "author__email", "post__title")

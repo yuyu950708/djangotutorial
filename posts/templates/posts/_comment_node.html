@@ -1,0 +1,53 @@
+<div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+  <div class="flex items-center justify-between gap-2">
+    <div class="min-w-0 text-sm">
+      <strong class="text-slate-800">{{ node.author.username }}</strong>
+      <span class="ml-2 text-xs text-slate-400">{{ node.created_at|timesince }} 前</span>
+      {% if node.parent_id %}
+        <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">回覆</span>
+      {% endif %}
+      {% if node.is_pinned %}
+        <span class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700">置頂</span>
+      {% endif %}
+      {% if node.is_locked %}
+        <span class="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] text-rose-700">鎖定</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{{ node.content }}</p>
+
+  {% if user.is_authenticated and not node.is_locked %}
+    <details class="mt-2">
+      <summary class="cursor-pointer text-sm font-medium text-sky-600 hover:underline">回覆</summary>
+      <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <input type="hidden" name="parent_id" value="{{ node.id }}">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+          <input
+            type="text"
+            name="content"
+            class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm"
+            placeholder="回覆 {{ node.author.username }}..."
+            required
+            autocomplete="off"
+          >
+          <button
+            type="submit"
+            class="min-h-11 w-full shrink-0 rounded-lg border border-sky-300 px-4 py-2 text-sm font-medium text-sky-600 hover:bg-sky-50 sm:w-auto"
+          >送出</button>
+        </div>
+      </form>
+    </details>
+  {% endif %}
+</div>
+
+{% if node.replies %}
+  <div class="mt-2 space-y-2 border-l border-slate-200 pl-4">
+    {% for child in node.replies %}
+      {% include "posts/_comment_node.html" with node=child %}
+    {% endfor %}
+  </div>
+{% endif %}
+

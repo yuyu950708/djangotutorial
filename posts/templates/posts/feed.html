@@ -203,7 +203,7 @@
           <hr class="my-4 border-slate-200">
 
           <div class="space-y-2">
-            {% for comment in post.comments.all %}
+            {% for comment in post.post_comments.all %}
               <p class="break-words text-sm"><strong>{{ comment.author.username }}</strong> {{ comment.content }}</p>
             {% empty %}
               <p class="text-sm text-slate-400">尚無留言</p>

@@ -19,7 +19,7 @@ from accounts.models import Profile
 
 from .ai_chat import get_assistant_reply
 from .forms import CategoryForm, PostEditForm, PostForm, TagForm
-from .models import Category, Collection, Comment, Like, Post, SearchLog, Tag
+from .models import Category, Collection, Like, Post, PostComment, SearchLog, Tag
 
 
 def feed(request):
@@ -65,8 +65,8 @@ def feed(request):
 
     posts = (
         Post.objects.select_related("author", "author__profile", "category")
-        .prefetch_related("likes", "comments", "tags")
-        .annotate(comment_count=Count("comments", distinct=True))
+        .prefetch_related("likes", "post_comments", "tags")
+        .annotate(comment_count=Count("post_comments", distinct=True))
     )
     if search_query:
         posts = posts.filter(
@@ -94,8 +94,8 @@ def feed(request):
         Profile.objects.bulk_create([Profile(user_id=user_id) for user_id in missing_profile_ids], ignore_conflicts=True)
         posts = (
             Post.objects.select_related("author", "author__profile", "category")
-            .prefetch_related("likes", "comments", "tags")
-            .annotate(comment_count=Count("comments", distinct=True))
+            .prefetch_related("likes", "post_comments", "tags")
+            .annotate(comment_count=Count("post_comments", distinct=True))
         )
         if search_query:
             posts = posts.filter(
@@ -170,10 +170,30 @@ def comment_create(request, pk):
     if request.method != "POST":
         return redirect("posts:feed")
     content = (request.POST.get("content") or "").strip()
-    if len(content) > 500:
-        content = content[:500]
+    parent_id_raw = (request.POST.get("parent_id") or "").strip()
+
+    if len(content) > 2000:
+        content = content[:2000]
+
+    parent = None
+    if parent_id_raw.isdigit():
+        parent = get_object_or_404(PostComment, pk=int(parent_id_raw), post_id=post.id)
+        if parent.is_locked:
+            parent = None
+            messages.error(request, "此留言已鎖定，無法回覆。")
+
     if content:
-        Comment.objects.create(post=post, author=request.user, content=content)
+        comment = PostComment.objects.create(
+            post=post,
+            author=request.user,
+            content=content,
+            parent=parent,
+        )
+        if parent:
+            comment.root_id = parent.root_id or parent.id
+        else:
+            comment.root_id = comment.id
+        comment.save(update_fields=["root"])
         messages.success(request, "留言已送出。")
     else:
         messages.error(request, "留言內容不可為空。")
@@ -185,7 +205,7 @@ def comment_create(request, pk):
 
 def post_detail(request, pk):
     post = get_object_or_404(
-        Post.objects.select_related("author", "author__profile", "category").prefetch_related("tags", "comments", "likes"),
+        Post.objects.select_related("author", "author__profile", "category").prefetch_related("tags", "post_comments", "likes"),
         pk=pk,
     )
     is_liked = False
@@ -193,10 +213,25 @@ def post_detail(request, pk):
     if request.user.is_authenticated:
         is_liked = post.likes.filter(user=request.user).exists()
         is_collected = post.collections.filter(user=request.user).exists()
+    comments = (
+        PostComment.objects.filter(post_id=post.id)
+        .select_related("author", "author__profile", "parent", "root")
+        .order_by("created_at")
+    )
+    by_id = {c.id: c for c in comments}
+    for c in by_id.values():
+        c.replies = []
+    roots = []
+    for c in comments:
+        if c.parent_id and c.parent_id in by_id:
+            by_id[c.parent_id].replies.append(c)
+        else:
+            roots.append(c)
+
     return render(
         request,
         "posts/post_detail.html",
-        {"post": post, "is_liked": is_liked, "is_collected": is_collected},
+        {"post": post, "is_liked": is_liked, "is_collected": is_collected, "comment_roots": roots},
     )
 
 
