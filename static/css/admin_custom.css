@@ -1,0 +1,313 @@
+/*
+ * 等等吃啥 — 後台自訂主題（與前台 sky / slate 風格一致）
+ */
+html[data-theme="light"] {
+  --eatwhat-sky: #0ea5e9;
+  --eatwhat-sky-deep: #0369a1;
+  --eatwhat-slate: #0f172a;
+
+  --primary: #38bdf8;
+  --secondary: #0284c7;
+  --accent: #ffffff;
+
+  --body-fg: #1e293b;
+  --body-bg: #f1f5f9;
+  --body-quiet-color: #64748b;
+
+  --header-color: rgba(255, 255, 255, 0.92);
+  --header-branding-color: #ffffff;
+  --header-bg: linear-gradient(135deg, #7dd3fc 0%, #0ea5e9 42%, #0284c7 100%);
+  --header-link-color: #ffffff;
+
+  --breadcrumbs-fg: #bae6fd;
+  --breadcrumbs-link-fg: #f8fafc;
+  --breadcrumbs-bg: #0c4a6e;
+
+  --link-fg: #0284c7;
+  --link-hover-color: #0369a1;
+  --link-selected-fg: #0c4a6e;
+
+  --hairline-color: #e2e8f0;
+  --border-color: #cbd5e1;
+
+  --selected-row: #e0f2fe;
+  --darkened-bg: #f8fafc;
+
+  --button-bg: #0284c7;
+  --button-hover-bg: #0369a1;
+  --default-button-bg: #0c4a6e;
+  --default-button-hover-bg: #075985;
+
+  --font-family-primary:
+    "Noto Sans TC",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+}
+
+html[data-theme="dark"] {
+  --eatwhat-sky: #38bdf8;
+  --eatwhat-sky-deep: #0284c7;
+  --eatwhat-slate: #f1f5f9;
+  --font-family-primary:
+    "Noto Sans TC",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+
+  --header-bg: linear-gradient(135deg, #075985 0%, #0c4a6e 50%, #082f49 100%);
+  --breadcrumbs-bg: #082f49;
+  --breadcrumbs-fg: #7dd3fc;
+  --body-bg: #0f172a;
+  --body-fg: #e2e8f0;
+  --darkened-bg: #1e293b;
+  --hairline-color: #334155;
+  --border-color: #475569;
+  --selected-row: #1e3a5f;
+}
+
+body {
+  background: var(--body-bg);
+  background-image: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(14, 165, 233, 0.12),
+    transparent 50%
+  );
+}
+
+#header {
+  border-bottom: none;
+  box-shadow: 0 4px 20px rgba(3, 105, 161, 0.28);
+  padding: 12px 40px;
+}
+
+#site-name {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+#site-name a:link,
+#site-name a:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none !important;
+  color: #fff !important;
+}
+
+#site-name a:hover,
+#site-name a:focus {
+  opacity: 0.95;
+  text-decoration: none !important;
+}
+
+.eatwhat-admin-logo__mark {
+  font-size: 1.35rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+.eatwhat-admin-logo__text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.eatwhat-admin-logo__sub {
+  display: block;
+  font-size: 0.55em;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.88;
+  margin-top: 2px;
+}
+
+.breadcrumbs {
+  border-radius: 0 0 8px 8px;
+  margin: 0 20px 0 20px;
+  padding: 10px 16px !important;
+  box-shadow: 0 2px 8px rgba(12, 74, 110, 0.15);
+}
+
+@media (min-width: 1024px) {
+  .breadcrumbs {
+    margin-left: 40px;
+    margin-right: 40px;
+  }
+}
+
+.main {
+  padding: 16px 20px 32px;
+}
+
+main.content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+#content {
+  background: #fff;
+  border: 1px solid var(--hairline-color);
+  border-radius: 12px;
+  padding: 20px 24px 28px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme="dark"] #content {
+  background: #1e293b;
+  border-color: var(--border-color);
+}
+
+#content h1 {
+  font-weight: 600;
+  color: var(--eatwhat-slate);
+  letter-spacing: -0.02em;
+}
+
+html[data-theme="dark"] #content h1 {
+  color: #f1f5f9;
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #0f172a;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--hairline-color);
+  border-bottom: none;
+}
+
+html[data-theme="dark"] .module h2,
+html[data-theme="dark"] .module caption,
+html[data-theme="dark"] .inline-group h2 {
+  background: #334155;
+  color: #f8fafc;
+  border-color: var(--border-color);
+}
+
+.module {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1px solid var(--hairline-color);
+}
+
+.module table {
+  border-radius: 0 0 8px 8px;
+}
+
+#changelist .results {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+  border-radius: 8px;
+  border-color: var(--border-color) !important;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--eatwhat-sky) !important;
+  outline: 2px solid rgba(14, 165, 233, 0.25);
+  outline-offset: 0;
+}
+
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+.object-tools a {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.submit-row {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--hairline-color);
+}
+
+html[data-theme="dark"] .submit-row {
+  background: #334155;
+  border-color: var(--border-color);
+}
+
+/* —— 登入頁 —— */
+.login {
+  background: linear-gradient(160deg, #e0f2fe 0%, #f1f5f9 45%, #e2e8f0 100%);
+  min-height: 100vh;
+}
+
+html[data-theme="dark"] body.login {
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+}
+
+.login #header {
+  background: linear-gradient(135deg, #7dd3fc 0%, #0ea5e9 42%, #0284c7 100%);
+  box-shadow: 0 4px 24px rgba(3, 105, 161, 0.35);
+}
+
+.login #container {
+  border: none;
+  border-radius: 16px;
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.08),
+    0 20px 40px -12px rgba(14, 165, 233, 0.2);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.login #content {
+  padding: 28px 28px 24px;
+}
+
+.login #content-main {
+  padding: 0;
+}
+
+.login .submit-row input {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+}
+
+.login .form-row #id_username,
+.login .form-row #id_password {
+  border-radius: 10px;
+  border-width: 1px;
+}
+
+#footer {
+  opacity: 0.65;
+  font-size: 0.75rem;
+  padding: 16px;
+  text-align: center;
+}
+
+.eatwhat-admin-footer {
+  margin: 0;
+}
+
+.eatwhat-admin-footer a {
+  color: var(--link-fg);
+  font-weight: 500;
+}
+
+.eatwhat-admin-footer a:hover {
+  color: var(--link-hover-color);
+}

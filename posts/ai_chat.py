@@ -69,7 +69,7 @@ def _normalize_history(history: list[Any]) -> list[dict[str, str]]:
 # =========================
 
 DEFAULT_NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-DEFAULT_NVIDIA_MODEL = "meta/llama-3.2-11b-vision-instruct" # "qwen/qwen3.5-397b-a17b" #第一版
+DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-3-nano-30b-a3b"
 
 
 def _nvidia_key_from_env() -> str:

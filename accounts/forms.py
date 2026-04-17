@@ -1,7 +1,11 @@
 from django import forms
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    UserCreationForm,
+    UsernameField,
+)
 
 from .models import Profile
 
@@ -23,7 +27,17 @@ class RegisterForm(UserCreationForm):
 
 
 class UsernameOrEmailAuthenticationForm(AuthenticationForm):
-    username = forms.CharField(label="帳號或 Email")
+    """
+    必須使用 Django 的 UsernameField（NFKC Unicode 正規化），與註冊表單一致；
+    若用一般 CharField，部分帳號會永遠無法登入。
+    """
+
+    username = UsernameField(
+        label="帳號或 Email",
+        widget=forms.TextInput(
+            attrs={"autofocus": True, "autocomplete": "username"},
+        ),
+    )
 
     error_messages = {
         "invalid_login": "帳號/Email 或密碼錯誤，請再試一次。",
@@ -33,10 +47,14 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
     def clean(self):
         identity = self.cleaned_data.get("username")
         password = self.cleaned_data.get("password")
-        if identity and password:
+        if identity is not None and password:
             username = identity
             if "@" in identity:
                 matched_user = User.objects.filter(email__iexact=identity).first()
+                if matched_user:
+                    username = matched_user.username
+            else:
+                matched_user = User.objects.filter(username__iexact=identity).first()
                 if matched_user:
                     username = matched_user.username
             self.user_cache = authenticate(
