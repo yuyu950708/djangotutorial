@@ -10,7 +10,7 @@ class UserAdmin(DjangoUserAdmin):
     list_filter = ("role", "is_staff", "is_superuser", "is_active", "date_joined")
     search_fields = ("username", "email", "role")
     fieldsets = DjangoUserAdmin.fieldsets + (
-        ("Eat What", {"fields": ("role", "created_at")}),
+        ("等等吃啥", {"fields": ("role", "created_at")}),
     )
     readonly_fields = ("created_at",)
     ordering = ("-created_at",)

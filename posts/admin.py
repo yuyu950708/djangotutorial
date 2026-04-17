@@ -1,5 +1,5 @@
 import csv
-
+# 可顯示中文
 from django.contrib import admin
 from django.db.models import Count
 from django.http import HttpResponse

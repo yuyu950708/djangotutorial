@@ -7,3 +7,4 @@ bleach>=6
 tinycss2>=1.4
 PyMySQL>=1.1
 django-import-export>=4.3
+mysqlclient>=2.1
