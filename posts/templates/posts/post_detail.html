@@ -39,16 +39,16 @@
     {% endif %}
 
     <div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-      <span>{{ post.likes.count }} 讚</span>
+      <span data-like-count>{{ post.likes.count }} 讚</span>
       <span>{{ post.post_comments.count }} 留言</span>
     </div>
 
     {% if user.is_authenticated %}
       <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
-        <form method="post" action="{% url 'posts:like_toggle' post.pk %}" class="w-full sm:w-auto">
+        <form method="post" action="{% url 'posts:like_toggle' post.pk %}" class="w-full sm:w-auto js-like-form">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto">
+          <button type="submit" data-like-button class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto">
             {% if is_liked %}取消按讚{% else %}按讚{% endif %}
           </button>
         </form>
@@ -96,5 +96,54 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const bindAjaxForm = (formSelector, buttonSelector, countSelector) => {
+      document.querySelectorAll(formSelector).forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const button = form.querySelector(buttonSelector);
+          if (!button) {
+            form.submit();
+            return;
+          }
+          if (button.disabled) return;
+          button.disabled = true;
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/json",
+              },
+            });
+            if (!response.ok) throw new Error("bad response");
+            const data = await response.json();
+            if (!data || !data.ok) throw new Error("bad payload");
+            button.textContent = data.button_label;
+            let scope = form.parentElement;
+            while (scope && !scope.querySelector(countSelector)) {
+              scope = scope.parentElement;
+            }
+            const likeCountEl = scope ? scope.querySelector(countSelector) : null;
+            if (likeCountEl) likeCountEl.textContent = `${data.like_count} 讚`;
+          } catch (error) {
+            form.submit();
+            return;
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+    };
+
+    bindAjaxForm(".js-like-form", "[data-like-button]", "[data-like-count]");
+    bindAjaxForm(".js-comment-like-form", "[data-comment-like-button]", "[data-comment-like-count]");
+  });
+</script>
 {% endblock %}
 

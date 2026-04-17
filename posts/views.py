@@ -120,12 +120,28 @@ def like_toggle(request, pk):
     if request.method != "POST":
         return redirect("posts:feed")
     like = post.likes.filter(user=request.user).first()
+    liked = False
     if like:
         like.delete()
         messages.info(request, "已取消按讚。")
     else:
         Like.objects.get_or_create(user=request.user, post=post)
+        liked = True
         messages.success(request, "已按讚。")
+    post.refresh_from_db(fields=["like_count"])
+    wants_json = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "")
+    )
+    if wants_json:
+        return JsonResponse(
+            {
+                "ok": True,
+                "liked": liked,
+                "like_count": post.like_count,
+                "button_label": "取消按讚" if liked else "按讚",
+            }
+        )
     next_url = (request.POST.get("next") or "").strip()
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
@@ -159,10 +175,26 @@ def comment_like_toggle(request, pk, comment_pk):
     existing = CommentLike.objects.filter(user=request.user, comment=comment).first()
     if existing:
         existing.delete()
+        liked = False
         messages.info(request, "已取消留言按讚。")
     else:
         CommentLike.objects.get_or_create(user=request.user, comment=comment)
+        liked = True
         messages.success(request, "已對留言按讚。")
+    comment.refresh_from_db(fields=["like_count"])
+    wants_json = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "")
+    )
+    if wants_json:
+        return JsonResponse(
+            {
+                "ok": True,
+                "liked": liked,
+                "like_count": comment.like_count,
+                "button_label": "取消按讚" if liked else "按讚",
+            }
+        )
     next_url = (request.POST.get("next") or "").strip()
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
