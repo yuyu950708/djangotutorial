@@ -85,7 +85,8 @@ def feed(request):
         posts = posts.filter(category_id=int(category_id))
     if tag_id.isdigit():
         posts = posts.filter(tags__id=int(tag_id)).distinct()
-    posts = posts.all()
+    # annotate / distinct 會讓預設 Meta.ordering 失效，須明確指定：最新貼文在上
+    posts = posts.order_by("-created_at", "-id")
 
     author_ids = set(posts.values_list("author_id", flat=True))
     existing_profile_ids = set(Profile.objects.filter(user_id__in=author_ids).values_list("user_id", flat=True))
@@ -105,7 +106,7 @@ def feed(request):
             posts = posts.filter(category_id=int(category_id))
         if tag_id.isdigit():
             posts = posts.filter(tags__id=int(tag_id)).distinct()
-        posts = posts.all()
+        posts = posts.order_by("-created_at", "-id")
 
     paginator = Paginator(posts, 20)
     page_obj = paginator.get_page(page_number or 1)

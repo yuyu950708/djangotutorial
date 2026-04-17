@@ -85,7 +85,7 @@ class Post(models.Model):
 
     class Meta:
         db_table = "posts"
-        ordering = ["-created_at"]
+        ordering = ["-created_at", "-id"]
         verbose_name = _("貼文")
         verbose_name_plural = _("貼文")
 
