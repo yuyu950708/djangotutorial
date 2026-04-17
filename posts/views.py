@@ -1,5 +1,4 @@
 import json
-import re
 from datetime import timedelta
 
 from django.conf import settings
@@ -14,8 +13,6 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from urllib.parse import urlencode
-
-from accounts.models import Profile
 
 from .ai_chat import get_assistant_reply
 from .forms import CategoryForm, PostEditForm, PostForm, TagForm
@@ -44,20 +41,6 @@ def feed(request):
             post.save()
             form.instance = post
             form.save_m2m()
-
-            new_tags_raw = (form.cleaned_data.get("new_tags") or "").strip()
-            if new_tags_raw:
-                names = [p.strip() for p in re.split(r"[,\s]+", new_tags_raw) if p.strip()]
-                seen = set()
-                uniq = []
-                for name in names:
-                    key = name.lower()
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    uniq.append(name)
-                tag_objs = [Tag.objects.get_or_create(name=n)[0] for n in uniq]
-                post.tags.add(*tag_objs)
             messages.success(request, "已發布貼文。")
             return redirect("posts:feed")
     else:
@@ -87,26 +70,6 @@ def feed(request):
         posts = posts.filter(tags__id=int(tag_id)).distinct()
     # annotate / distinct 會讓預設 Meta.ordering 失效，須明確指定：最新貼文在上
     posts = posts.order_by("-created_at", "-id")
-
-    author_ids = set(posts.values_list("author_id", flat=True))
-    existing_profile_ids = set(Profile.objects.filter(user_id__in=author_ids).values_list("user_id", flat=True))
-    missing_profile_ids = author_ids - existing_profile_ids
-    if missing_profile_ids:
-        Profile.objects.bulk_create([Profile(user_id=user_id) for user_id in missing_profile_ids], ignore_conflicts=True)
-        posts = (
-            Post.objects.select_related("author", "author__profile", "category")
-            .prefetch_related("likes", "post_comments", "tags")
-            .annotate(comment_count=Count("post_comments", distinct=True))
-        )
-        if search_query:
-            posts = posts.filter(
-                Q(content__icontains=search_query) | Q(author__username__icontains=search_query)
-            )
-        if category_id.isdigit():
-            posts = posts.filter(category_id=int(category_id))
-        if tag_id.isdigit():
-            posts = posts.filter(tags__id=int(tag_id)).distinct()
-        posts = posts.order_by("-created_at", "-id")
 
     if request.user.is_authenticated:
         posts = posts.annotate(

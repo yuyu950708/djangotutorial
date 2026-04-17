@@ -6,7 +6,6 @@ from django.conf import settings
 from django.utils.html import strip_tags
 
 from .models import Category, Post, Tag
-from .models import Category, Tag
 
 _EXTRA_CSS = frozenset(
     {
@@ -91,10 +90,10 @@ class PostEditForm(PostForm):
         widget=forms.TextInput(
             attrs={
                 "class": "min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm",
-                "placeholder": "用逗號或空格分隔，例如：辣, 便宜",
+                "placeholder": "用逗號分隔，例如：辣, 便宜, Comfort Food",
             }
         ),
-        help_text="可輸入多個，逗號或空格分隔",
+        help_text="可輸入多個，使用逗號分隔（可包含空白）",
     )
 
     class Meta:
@@ -133,8 +132,8 @@ class PostEditForm(PostForm):
         return value
 
     def _parse_new_tags(self, raw: str):
-        # Split by comma/whitespace and keep unique order.
-        parts = [p.strip() for p in re.split(r"[,\s]+", raw) if p.strip()]
+        # Split by comma and keep unique order; allow spaces inside tag names.
+        parts = [p.strip() for p in raw.split(",") if p.strip()]
         seen = set()
         out = []
         for p in parts:
