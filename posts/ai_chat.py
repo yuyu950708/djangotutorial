@@ -1,16 +1,18 @@
 """
 AI chat provider helpers for the site.
 
-Currently supports:
-- NVIDIA Integrate (OpenAI-style Chat Completions)
+Providers:
+- NVIDIA Integrate (OpenAI-compatible /v1/chat/completions; supports vision models)
 - Google Gemini (generateContent; supports optional inline image)
 """
 
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -21,32 +23,21 @@ from django.conf import settings
 MAX_HISTORY_TURNS = 20
 MAX_MESSAGE_CHARS = 4000
 
-# ----- System prompt -----
-SYSTEM_PROMPT = """你是「吃什麼」網站的 AI 飲食助理。
+SYSTEM_PROMPT = """你是「等等吃啥」網站的 AI 美食助理。
 規則：
 - 一律用繁體中文回答。
-- 回答要具體、可執行；必要時可用 Markdown（標題、條列、表格）。
-- 使用者如果提到食材、預算、時間、份量、飲食限制，請優先給出符合限制的建議。
-- 若資訊不足，先用 1–3 個問題釐清，再給建議。
+- 針對美食、餐廳、聚餐、料理、營養與飲食建議提供具體可執行的回答。
+- 如果使用者上傳食物照片：先描述你看到的內容，再估算大概熱量（若不確定要說明假設與不確定性）。
+- 資訊不足時先問 1–3 個問題釐清。
 """
 
 
 def _demo_reply(message: str, image) -> str:
     if image:
-        return (
-            "目前尚未設定任何 AI API Key，所以我只能回覆示範訊息。\n\n"
-            "你有上傳圖片，但未設定可用的多模態模型（例如 Gemini）。\n"
-            "請在 `.env` 內設定 `GEMINI_API_KEY`（以及可選的 `GEMINI_MODEL`），"
-            "然後重啟 Django 伺服器。"
-        )
+        return "尚未設定可用的 AI API Key（NVIDIA_API_KEY 或 GEMINI_API_KEY）。"
     if message:
-        return (
-            "目前尚未設定任何 AI API Key，所以我只能回覆示範訊息。\n\n"
-            f"你剛剛說：{message}\n\n"
-            "請在 `.env` 內設定 `NVIDIA_API_KEY` 或 `GEMINI_API_KEY`，"
-            "然後重啟 Django 伺服器。"
-        )
-    return "目前尚未設定任何 AI API Key，所以我只能回覆示範訊息。"
+        return f"（示範模式）你說：{message}\n\n請在 `.env` 設定 NVIDIA_API_KEY 或 GEMINI_API_KEY。"
+    return "（示範模式）請輸入訊息。"
 
 
 def _normalize_history(history: list[Any]) -> list[dict[str, str]]:
@@ -69,24 +60,68 @@ def _normalize_history(history: list[Any]) -> list[dict[str, str]]:
 # =========================
 
 DEFAULT_NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-3-nano-30b-a3b"
+# Use a vision-capable model by default so image uploads work out-of-the-box.
+DEFAULT_NVIDIA_MODEL = "meta/llama-3.2-11b-vision-instruct"
 
 
 def _nvidia_key_from_env() -> str:
-    # Back-compat with main.py using `api_key`
     return (os.environ.get("NVIDIA_API_KEY") or os.environ.get("api_key") or "").strip()
 
 
-def _build_nvidia_messages(
-    history: list[dict[str, str]],
-    message: str,
-    image,
-) -> list[dict[str, Any]]:
+def _nvidia_inline_image_data_url(image) -> tuple[str, str]:
     """
-    Build OpenAI-compatible messages for NVIDIA Integrate.
+    NVIDIA Integrate docs mention large image payloads may require Asset APIs.
+    To avoid gateway 5xx (e.g. 502), downscale/compress aggressively.
 
-    For multimodal input, the *user* message content is sent as an array of
-    typed content parts: text + image_url(data URL).
+    Returns (mime, base64).
+    """
+    raw = image.read()
+    image.seek(0)
+
+    target_bytes = 120 * 1024  # base64 overhead ~33%, keep JSON reasonably small
+
+    try:
+        from PIL import Image
+
+        im = Image.open(io.BytesIO(raw))
+        if im.mode not in ("RGB", "L"):
+            im = im.convert("RGB")
+
+        max_side = 768
+        w, h = im.size
+        if max(w, h) > max_side:
+            scale = max_side / max(w, h)
+            im = im.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
+
+        quality = 72
+        data = b""
+        for _ in range(7):
+            buf = io.BytesIO()
+            im.save(buf, format="JPEG", quality=quality, optimize=True)
+            data = buf.getvalue()
+            if len(data) <= target_bytes:
+                break
+            quality = max(40, quality - 8)
+            if quality <= 48:
+                w2, h2 = im.size
+                im = im.resize((max(1, int(w2 * 0.85)), max(1, int(h2 * 0.85))), Image.LANCZOS)
+
+        b64 = base64.b64encode(data if data else raw).decode("ascii")
+        return ("image/jpeg", b64)
+    except Exception:
+        mime = (getattr(image, "content_type", None) or "image/jpeg").lower()
+        if mime not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
+            mime = "image/jpeg"
+        b64 = base64.b64encode(raw).decode("ascii")
+        return (mime, b64)
+
+
+def _build_nvidia_messages(history: list[dict[str, str]], message: str, image) -> list[dict[str, Any]]:
+    """
+    Build messages for NVIDIA Integrate.
+
+    For images, use string content with an HTML <img src="data:...;base64,..."/> tag.
+    This matches NVIDIA Integrate docs for passing base64 images with role=user.
     """
     messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
     for h in history:
@@ -94,19 +129,9 @@ def _build_nvidia_messages(
 
     text = (message or "").strip()[:MAX_MESSAGE_CHARS]
     if image:
-        raw = image.read()
-        image.seek(0)
-        b64 = base64.b64encode(raw).decode("ascii")
-        mime = getattr(image, "content_type", None) or "image/jpeg"
-        if mime not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
-            mime = "image/jpeg"
-        data_url = f"data:{mime};base64,{b64}"
-        content: list[dict[str, Any]] = []
-        if text:
-            content.append({"type": "text", "text": text})
-        else:
-            content.append({"type": "text", "text": "請描述這張圖片，並給我飲食建議。"})
-        content.append({"type": "image_url", "image_url": {"url": data_url}})
+        mime, b64 = _nvidia_inline_image_data_url(image)
+        prompt = text or "請描述這張圖片，並估算大概熱量（若不確定請說明理由與假設）。"
+        content = f'{prompt}\n<img src="data:{mime};base64,{b64}" />'
         messages.append({"role": "user", "content": content})
     else:
         messages.append({"role": "user", "content": text})
@@ -120,9 +145,9 @@ def call_nvidia_chat_completions(
     api_key: str,
     model: str,
     invoke_url: str = DEFAULT_NVIDIA_INVOKE_URL,
-    temperature: float = 0.7,
+    temperature: float = 0.4,
     top_p: float = 0.95,
-    max_tokens: int = 1024,
+    max_tokens: int = 512,
 ) -> str:
     key = (api_key or "").strip()
     if not key:
@@ -149,38 +174,49 @@ def call_nvidia_chat_completions(
         method="POST",
     )
 
-    try:
+    def _do() -> dict[str, Any]:
         with urllib.request.urlopen(req, timeout=90) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+            return json.loads(resp.read().decode("utf-8"))
+
+    try:
+        data = _do()
         choices = data.get("choices") or []
         if not choices:
             return "NVIDIA API 沒有回傳 choices，請稍後再試。"
         msg = (choices[0].get("message") or {}).get("content") or ""
-        msg = msg.strip()
-        return msg or "NVIDIA API 回覆為空，請稍後再試。"
+        return (msg or "").strip() or "NVIDIA API 回覆為空，請稍後再試。"
     except TimeoutError:
-        return (
-            "NVIDIA API 讀取回覆逾時（timeout）。\n"
-            "建議：稍後再試、降低回覆長度（`max_tokens`）、或換一個模型。"
-        )
+        return "NVIDIA API 讀取回覆逾時（timeout），請稍後再試。"
     except urllib.error.HTTPError as exc:
         try:
             raw = exc.read().decode("utf-8")
         except Exception:
             raw = ""
-        lower = raw.lower()
-        if exc.code == 401 or exc.code == 403:
+
+        if exc.code in (502, 503, 504):
+            # transient gateway / upstream issues; quick single retry
+            time.sleep(0.8)
+            try:
+                data = _do()
+                choices = data.get("choices") or []
+                if choices:
+                    msg = (choices[0].get("message") or {}).get("content") or ""
+                    msg = (msg or "").strip()
+                    if msg:
+                        return msg
+            except Exception:
+                pass
+            return (
+                f"NVIDIA API 上游暫時性錯誤（HTTP {exc.code}）。\n"
+                "請稍後重試；如果你是傳圖片，建議換更小/更清晰的圖片（避免超高解析），"
+                "或改用 Gemini（較穩定）。"
+            )
+
+        if exc.code in (401, 403):
             return "NVIDIA API 權限不足：請確認 `NVIDIA_API_KEY` 正確且仍有效。"
         if exc.code == 429:
             return "NVIDIA API 請求太頻繁（429）：請稍後再試。"
-        if exc.code == 400 and raw:
-            # Common cases when sending images to a text-only model / unsupported input schema
-            if "image" in lower or "multimodal" in lower or "vision" in lower:
-                return (
-                    "NVIDIA API 回覆 400：看起來你選的模型/設定不支援圖片輸入。\n"
-                    "請改用支援 vision 的模型（例如 `meta/llama-3.2-11b-vision-instruct`），"
-                    "或在 `.env` 設定 `NVIDIA_MODEL` 後重啟伺服器。"
-                )
+
         if raw:
             return f"NVIDIA API 錯誤（HTTP {exc.code}）：{raw[:500]}"
         return f"NVIDIA API 錯誤（HTTP {exc.code}）：{exc}"
@@ -224,7 +260,7 @@ def _build_gemini_contents(
         mime = getattr(image, "content_type", None) or "image/jpeg"
         if mime not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
             mime = "image/jpeg"
-        text_part = (message or "請描述這張圖片，並給出飲食建議。").strip()[:MAX_MESSAGE_CHARS]
+        text_part = (message or "請描述這張圖片並給出飲食建議。").strip()[:MAX_MESSAGE_CHARS]
         parts: list[dict[str, Any]] = [
             {"text": text_part},
             {"inline_data": {"mime_type": mime, "data": b64}},
@@ -236,9 +272,7 @@ def _build_gemini_contents(
     return contents
 
 
-def call_gemini_generate(
-    contents: list[dict[str, Any]], *, model: str, api_key: str
-) -> str:
+def call_gemini_generate(contents: list[dict[str, Any]], *, model: str, api_key: str) -> str:
     key = (api_key or "").strip()
     if not key:
         return "缺少 Gemini API Key：請在 `.env` 設定 `GEMINI_API_KEY`。"
@@ -252,10 +286,7 @@ def call_gemini_generate(
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "x-goog-api-key": key,
-        },
+        headers={"Content-Type": "application/json", "x-goog-api-key": key},
         method="POST",
     )
     try:
@@ -271,12 +302,9 @@ def call_gemini_generate(
         out = "\n".join(t for t in texts if t).strip()
         return out or "Gemini 回覆為空，請稍後再試。"
     except TimeoutError:
-        return (
-            "Gemini API 讀取回覆逾時（timeout）。\n"
-            "建議：稍後再試、縮短問題、或改用較快的模型（例如 `gemini-2.0-flash`）。"
-        )
+        return "Gemini API 讀取回覆逾時（timeout），請稍後再試。"
     except urllib.error.HTTPError as exc:
-        if exc.code == 401 or exc.code == 403:
+        if exc.code in (401, 403):
             return "Gemini API 權限不足：請確認 `GEMINI_API_KEY` 正確且已開啟 API。"
         if exc.code == 429:
             return "Gemini API 請求太頻繁（429）：請稍後再試。"
@@ -296,31 +324,24 @@ def call_gemini_generate(
 # =========================
 
 
-def get_assistant_reply(
-    *,
-    message: str,
-    image,
-    history: list[Any],
-) -> str:
+def get_assistant_reply(*, message: str, image, history: list[Any]) -> str:
     hist = _normalize_history(history)
-
-    gemini_key = (getattr(settings, "GEMINI_API_KEY", "") or "").strip()
-    gemini_model = getattr(settings, "GEMINI_MODEL", "gemini-2.0-flash")
 
     nvidia_key = (getattr(settings, "NVIDIA_API_KEY", "") or "").strip() or _nvidia_key_from_env()
     nvidia_model = getattr(settings, "NVIDIA_MODEL", DEFAULT_NVIDIA_MODEL)
     nvidia_url = getattr(settings, "NVIDIA_INVOKE_URL", DEFAULT_NVIDIA_INVOKE_URL)
 
-    # NVIDIA (supports multimodal via OpenAI-style content parts)
+    gemini_key = (getattr(settings, "GEMINI_API_KEY", "") or "").strip()
+    gemini_model = getattr(settings, "GEMINI_MODEL", "gemini-2.0-flash")
+
+    # Prefer NVIDIA if configured (supports images via embedded <img> base64)
     if nvidia_key:
         msgs = _build_nvidia_messages(hist, message, image)
-        return call_nvidia_chat_completions(
-            messages=msgs, api_key=nvidia_key, model=nvidia_model, invoke_url=nvidia_url
-        )
+        return call_nvidia_chat_completions(messages=msgs, api_key=nvidia_key, model=nvidia_model, invoke_url=nvidia_url)
 
-    # Prefer Gemini when NVIDIA isn't configured
     if gemini_key:
         contents = _build_gemini_contents(hist, message, image)
         return call_gemini_generate(contents, model=gemini_model, api_key=gemini_key)
 
     return _demo_reply(message, image)
+

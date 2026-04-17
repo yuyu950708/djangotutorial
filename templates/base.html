@@ -65,7 +65,10 @@
           {% if user.is_authenticated %}
             <a class="rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'posts:collections_list' %}">我的收藏</a>
             <a class="max-w-[10rem] truncate rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'accounts:profile_detail' user.username %}" title="{{ user.username }}">{{ user.username }}</a>
-            <a class="rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25" href="{% url 'accounts:logout' %}">登出</a>
+            <form method="post" action="{% url 'accounts:logout' %}" class="m-0 inline">
+              {% csrf_token %}
+              <button type="submit" class="cursor-pointer rounded-lg bg-white/15 px-3 py-2 text-base font-semibold text-white hover:bg-white/25 md:text-lg">登出</button>
+            </form>
           {% else %}
             <a class="rounded-lg px-3 py-2 hover:bg-white/15" href="{% url 'accounts:login' %}">登入</a>
             <a class="rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25" href="{% url 'accounts:register' %}">註冊</a>
@@ -107,7 +110,10 @@
             <a class="min-h-11 rounded-lg px-4 py-3 text-base font-semibold hover:bg-white/15" href="{% url 'posts:collections_list' %}" @click="open = false">我的收藏</a>
             <a class="min-h-11 rounded-lg px-4 py-3 text-base font-semibold hover:bg-white/15" href="{% url 'accounts:profile_detail' user.username %}" @click="open = false">個人頁面</a>
             <a class="min-h-11 rounded-lg px-4 py-3 text-base font-semibold hover:bg-white/15" href="{% url 'accounts:profile_edit' %}" @click="open = false">編輯檔案</a>
-            <a class="min-h-11 rounded-lg bg-white/15 px-4 py-3 text-base font-semibold hover:bg-white/25" href="{% url 'accounts:logout' %}">登出</a>
+            <form method="post" action="{% url 'accounts:logout' %}" class="m-0 w-full" @submit="open = false">
+              {% csrf_token %}
+              <button type="submit" class="min-h-11 w-full cursor-pointer rounded-lg bg-white/15 px-4 py-3 text-left text-base font-semibold text-white hover:bg-white/25">登出</button>
+            </form>
           {% else %}
             <a class="min-h-11 rounded-lg px-4 py-3 text-base font-semibold hover:bg-white/15" href="{% url 'accounts:login' %}" @click="open = false">登入</a>
             <a class="min-h-11 rounded-lg bg-white/15 px-4 py-3 text-base font-semibold hover:bg-white/25" href="{% url 'accounts:register' %}" @click="open = false">註冊</a>

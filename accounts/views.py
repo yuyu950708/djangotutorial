@@ -23,7 +23,7 @@ class LoginView(DjangoLoginView):
 
 
 class LogoutView(DjangoLogoutView):
-    next_page = "posts:feed"
+    next_page = "accounts:login"
 
 
 def register(request):
