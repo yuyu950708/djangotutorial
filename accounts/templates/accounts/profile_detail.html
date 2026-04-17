@@ -21,29 +21,58 @@
         <a href="{% url 'accounts:profile_edit' %}" class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">編輯檔案</a>
         {% endif %}
     </div>
-    <h2 class="mb-3 text-base font-semibold sm:text-lg">貼文</h2>
-    {% for post in posts %}
-    <article class="mb-3 rounded-xl bg-white p-4 shadow sm:p-5">
-      <div class="post-body mb-3 max-w-full overflow-x-auto break-words leading-relaxed [&_img]:my-2 [&_img]:max-w-full [&_img]:rounded-lg [&_p]:mb-2 [&_table]:max-w-full [&_table]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">{{ post.content|safe }}</div>
-      {% if post.image %}<img src="{{ post.image.url }}" alt="" class="w-full rounded-lg object-cover">{% endif %}
-      <p class="mt-3 text-sm text-slate-500">{{ post.created_at|timesince }} 前</p>
-    </article>
-    {% empty %}
-    <p class="text-sm text-slate-500 sm:text-base">尚無貼文。</p>
-    {% endfor %}
+    <div class="mb-3 flex flex-wrap gap-2">
+      <a
+        href="{% url 'accounts:profile_posts' profile_user.username %}"
+        class="rounded-lg px-4 py-2 text-sm font-medium {% if active_section == 'posts' %}bg-sky-500 text-white{% else %}border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %}"
+      >貼文</a>
+      <a
+        href="{% url 'accounts:profile_comments' profile_user.username %}"
+        class="rounded-lg px-4 py-2 text-sm font-medium {% if active_section == 'comments' %}bg-sky-500 text-white{% else %}border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %}"
+      >留言紀錄</a>
+    </div>
 
-    <h2 class="mb-3 mt-6 text-base font-semibold sm:text-lg">留言紀錄</h2>
-    {% for comment in recent_comments %}
-    <article class="mb-3 rounded-xl bg-white p-4 shadow sm:p-5">
-      <p class="mb-2 break-words text-sm text-slate-700">{{ comment.content }}</p>
-      <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
-        <span>{{ comment.created_at|timesince }} 前</span>
-        <span>·</span>
-        <a href="{% url 'posts:post_detail' comment.post_id %}" class="font-medium text-sky-600 hover:underline">查看貼文</a>
+    {% if active_section == "posts" %}
+      <h2 class="mb-3 text-base font-semibold sm:text-lg">貼文</h2>
+      {% for post in page_obj %}
+      <article class="mb-3 rounded-xl bg-white p-4 shadow sm:p-5">
+        <div class="post-body mb-3 max-w-full overflow-x-auto break-words leading-relaxed [&_img]:my-2 [&_img]:max-w-full [&_img]:rounded-lg [&_p]:mb-2 [&_table]:max-w-full [&_table]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">{{ post.content|safe }}</div>
+        {% if post.image %}<img src="{{ post.image.url }}" alt="" class="w-full rounded-lg object-cover">{% endif %}
+        <p class="mt-3 text-sm text-slate-500">{{ post.created_at|timesince }} 前</p>
+      </article>
+      {% empty %}
+      <p class="text-sm text-slate-500 sm:text-base">尚無貼文。</p>
+      {% endfor %}
+    {% else %}
+      <h2 class="mb-3 text-base font-semibold sm:text-lg">留言紀錄</h2>
+      {% for comment in page_obj %}
+      <article class="mb-3 rounded-xl bg-white p-4 shadow sm:p-5">
+        <p class="mb-2 break-words text-sm text-slate-700">{{ comment.content }}</p>
+        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
+          <span>{{ comment.created_at|timesince }} 前</span>
+          <span>·</span>
+          <a href="{% url 'posts:post_detail' comment.post_id %}" class="font-medium text-sky-600 hover:underline">查看貼文</a>
+        </div>
+      </article>
+      {% empty %}
+      <p class="text-sm text-slate-500 sm:text-base">尚無留言紀錄。</p>
+      {% endfor %}
+    {% endif %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-4 flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow sm:px-5">
+      <div class="text-slate-500">
+        {% if active_section == "posts" %}貼文{% else %}留言{% endif %}：第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁
       </div>
-    </article>
-    {% empty %}
-    <p class="text-sm text-slate-500 sm:text-base">尚無留言紀錄。</p>
-    {% endfor %}
+      <div class="flex gap-2">
+        {% if page_obj.has_previous %}
+          <a class="rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50" href="?page={{ page_obj.previous_page_number }}">上一頁</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a class="rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50" href="?page={{ page_obj.next_page_number }}">下一頁</a>
+        {% endif %}
+      </div>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %}

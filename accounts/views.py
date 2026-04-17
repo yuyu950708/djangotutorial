@@ -6,6 +6,7 @@ from django.contrib.auth.views import (
 )
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ProfileEditForm, RegisterForm, UsernameOrEmailAuthenticationForm
@@ -54,27 +55,55 @@ def profile_edit(request):
     return render(request, "accounts/profile_edit.html", {"form": form})
 
 
-def profile_detail(request, username):
+PROFILE_POSTS_PER_PAGE = 10
+PROFILE_COMMENTS_PER_PAGE = 10
+
+
+def _profile_header_context(request, username):
     user = get_object_or_404(User, username=username)
     profile, _ = Profile.objects.get_or_create(user=user)
-    posts = Post.objects.filter(author=user).order_by("-created_at")[:20]
-    recent_comments = (
-        PostComment.objects.filter(author=user)
-        .select_related("post")
-        .order_by("-created_at")[:20]
-    )
     is_following = False
     if request.user.is_authenticated:
         is_following = Follow.objects.filter(follower=request.user, following=user).exists()
+    return {"profile_user": user, "profile": profile, "is_following": is_following}
+
+
+def profile_detail(request, username):
+    return redirect("accounts:profile_posts", username=username)
+
+
+def profile_posts(request, username):
+    base = _profile_header_context(request, username)
+    post_qs = Post.objects.filter(author=base["profile_user"]).order_by("-created_at", "-id")
+    paginator = Paginator(post_qs, PROFILE_POSTS_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get("page") or 1)
+
     return render(
         request,
         "accounts/profile_detail.html",
         {
-            "profile_user": user,
-            "profile": profile,
-            "posts": posts,
-            "recent_comments": recent_comments,
-            "is_following": is_following,
+            **base,
+            "active_section": "posts",
+            "page_obj": page_obj,
+        },
+    )
+
+
+def profile_comments(request, username):
+    base = _profile_header_context(request, username)
+    comment_qs = (
+        PostComment.objects.filter(author=base["profile_user"]).select_related("post").order_by("-created_at", "-id")
+    )
+    paginator = Paginator(comment_qs, PROFILE_COMMENTS_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get("page") or 1)
+
+    return render(
+        request,
+        "accounts/profile_detail.html",
+        {
+            **base,
+            "active_section": "comments",
+            "page_obj": page_obj,
         },
     )
 
