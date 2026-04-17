@@ -240,6 +240,49 @@ def comment_create(request, pk):
     return redirect("posts:feed")
 
 
+@login_required(login_url=settings.LOGIN_URL)
+def comment_edit(request, pk, comment_pk):
+    post = get_object_or_404(Post, pk=pk)
+    comment = get_object_or_404(PostComment, pk=comment_pk, post_id=post.id)
+    if comment.author_id != request.user.id:
+        messages.error(request, "只能編輯自己的留言。")
+        return redirect("posts:post_detail", pk=post.id)
+    if request.method != "POST":
+        return redirect("posts:post_detail", pk=post.id)
+
+    content = (request.POST.get("content") or "").strip()
+    if len(content) > 2000:
+        content = content[:2000]
+    if not content:
+        messages.error(request, "留言內容不可為空。")
+    else:
+        comment.content = content
+        comment.save(update_fields=["content", "updated_at"])
+        messages.success(request, "留言已更新。")
+
+    next_url = (request.POST.get("next") or "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect("posts:post_detail", pk=post.id)
+
+
+@login_required(login_url=settings.LOGIN_URL)
+def comment_delete(request, pk, comment_pk):
+    post = get_object_or_404(Post, pk=pk)
+    comment = get_object_or_404(PostComment, pk=comment_pk, post_id=post.id)
+    if comment.author_id != request.user.id:
+        messages.error(request, "只能刪除自己的留言。")
+        return redirect("posts:post_detail", pk=post.id)
+    if request.method == "POST":
+        comment.delete()
+        messages.success(request, "留言已刪除。")
+
+    next_url = (request.POST.get("next") or "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect("posts:post_detail", pk=post.id)
+
+
 def post_detail(request, pk):
     post = get_object_or_404(
         Post.objects.select_related("author", "author__profile", "category").prefetch_related("tags", "post_comments", "likes"),

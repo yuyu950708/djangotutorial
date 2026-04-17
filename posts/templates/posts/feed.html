@@ -226,6 +226,22 @@
                       {% if comment.id in liked_comment_ids %}取消按讚{% else %}按讚{% endif %}
                     </button>
                   </form>
+                  {% if user.id == comment.author_id %}
+                    <details class="inline">
+                      <summary class="cursor-pointer font-medium text-slate-600 hover:underline">編輯</summary>
+                      <form action="{% url 'posts:comment_edit' post.pk comment.id %}" method="post" class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="text" name="content" value="{{ comment.content }}" class="min-h-11 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm" required autocomplete="off">
+                        <button type="submit" class="min-h-11 w-full shrink-0 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">儲存</button>
+                      </form>
+                    </details>
+                    <form action="{% url 'posts:comment_delete' post.pk comment.id %}" method="post" class="inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="font-medium text-rose-600 hover:underline">刪除</button>
+                    </form>
+                  {% endif %}
                 </div>
               </div>
             {% empty %}
