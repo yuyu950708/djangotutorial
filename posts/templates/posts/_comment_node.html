@@ -1,3 +1,4 @@
+<div class="space-y-2" data-comment-id="{{ node.id }}">
 <div class="rounded-lg border border-slate-200 bg-white px-3 py-2" x-data="{ editing: false }">
   <div class="flex items-start justify-between gap-2">
     <div class="flex min-w-0 items-start gap-2 flex-1">
@@ -45,19 +46,29 @@
     <p class="mt-1 whitespace-pre-wrap break-words text-sm text-slate-700">{{ node.content }}</p>
 
     {% if user.is_authenticated %}
-      <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        <span data-comment-like-count>{{ node.like_count|default:0 }} 讚</span>
-        <form method="post" action="{% url 'posts:comment_like_toggle' post.pk node.id %}" class="inline js-comment-like-form">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button
-            type="submit"
-            data-comment-like-button
-            class="rounded-md border border-rose-200 bg-rose-50/80 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+      <div
+        class="mt-2 flex flex-col gap-1"
+        x-data="commentLikeBlock({% if node.id in liked_comment_ids %}true{% else %}false{% endif %}, {{ node.like_count|default:0 }})"
+      >
+        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span x-text="count + ' 讚'"></span>
+          <form
+            method="post"
+            action="{% url 'posts:comment_like_toggle' post.pk node.id %}"
+            class="inline"
+            @submit.prevent="submitCommentLike"
           >
-            {% if node.id in liked_comment_ids %}取消按讚{% else %}按讚{% endif %}
-          </button>
-        </form>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button
+              type="submit"
+              class="rounded-md border border-rose-200 bg-rose-50/80 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+              :disabled="submitting"
+              x-text="isLiked ? '取消按讚' : '按讚'"
+            ></button>
+          </form>
+        </div>
+        <p x-show="showMsg" x-cloak class="text-[11px] text-slate-500" x-text="msgText"></p>
       </div>
     {% else %}
       <p class="mt-2 text-xs text-slate-400">{{ node.like_count|default:0 }} 讚</p>
@@ -66,7 +77,7 @@
     {% if user.is_authenticated and not node.is_locked %}
       <details class="mt-2">
         <summary class="cursor-pointer text-sm font-medium text-sky-600 hover:underline">回覆</summary>
-        <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-2">
+        <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="js-comment-create-form mt-2">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <input type="hidden" name="parent_id" value="{{ node.id }}">
@@ -102,11 +113,12 @@
   </div>
 </div>
 
-{% if node.replies %}
-  <div class="mt-2 space-y-2 border-l border-slate-200 pl-4">
-    {% for child in node.replies %}
-      {% include "posts/_comment_node.html" with node=child %}
-    {% endfor %}
-  </div>
-{% endif %}
-
+<div
+  class="mt-2 space-y-2 border-l border-slate-200 pl-4{% if not node.replies %} hidden{% endif %}"
+  data-comment-children="{{ node.id }}"
+>
+  {% for child in node.replies %}
+    {% include "posts/_comment_node.html" with node=child %}
+  {% endfor %}
+</div>
+</div>

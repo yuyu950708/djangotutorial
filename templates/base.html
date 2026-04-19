@@ -275,6 +275,212 @@
     {% endif %}
     {% block content %}{% endblock %}
   </main>
+  <script>
+    function postInteractBlock(isLikedInit, likeCountInit, isCollectedInit) {
+      return {
+        isLiked: !!isLikedInit,
+        count: Number(likeCountInit) || 0,
+        isCollected: !!isCollectedInit,
+        showMsg: false,
+        msgText: "",
+        hideTimer: null,
+        submittingLike: false,
+        submittingCollect: false,
+        bumpMsg(text) {
+          this.msgText = text;
+          this.showMsg = true;
+          if (this.hideTimer) clearTimeout(this.hideTimer);
+          this.hideTimer = setTimeout(() => {
+            this.showMsg = false;
+          }, 2000);
+        },
+        async submitLike(event) {
+          event.preventDefault();
+          if (this.submittingLike) return;
+          this.submittingLike = true;
+          const form = event.currentTarget;
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/json",
+              },
+            });
+            if (!response.ok) throw new Error("bad");
+            const data = await response.json();
+            this.isLiked = !!data.is_liked;
+            this.count = Number(data.like_count) || 0;
+            this.bumpMsg(this.isLiked ? "已按讚" : "已取消按讚");
+          } catch (e) {
+            this.bumpMsg("操作失敗，請稍後再試");
+          } finally {
+            this.submittingLike = false;
+          }
+        },
+        async submitCollect(event) {
+          event.preventDefault();
+          if (this.submittingCollect) return;
+          this.submittingCollect = true;
+          const form = event.currentTarget;
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/json",
+              },
+            });
+            if (!response.ok) throw new Error("bad");
+            const data = await response.json();
+            this.isCollected = !!data.is_collected;
+            this.bumpMsg(this.isCollected ? "已收藏" : "已取消收藏");
+          } catch (e) {
+            this.bumpMsg("操作失敗，請稍後再試");
+          } finally {
+            this.submittingCollect = false;
+          }
+        },
+      };
+    }
+
+    function commentLikeBlock(isLikedInit, countInit) {
+      return {
+        isLiked: !!isLikedInit,
+        count: Number(countInit) || 0,
+        showMsg: false,
+        msgText: "",
+        hideTimer: null,
+        submitting: false,
+        bumpMsg(text) {
+          this.msgText = text;
+          this.showMsg = true;
+          if (this.hideTimer) clearTimeout(this.hideTimer);
+          this.hideTimer = setTimeout(() => {
+            this.showMsg = false;
+          }, 2000);
+        },
+        async submitCommentLike(event) {
+          event.preventDefault();
+          if (this.submitting) return;
+          this.submitting = true;
+          const form = event.currentTarget;
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/json",
+              },
+            });
+            if (!response.ok) throw new Error("bad");
+            const data = await response.json();
+            this.isLiked = !!data.is_liked;
+            this.count = Number(data.like_count) || 0;
+            this.bumpMsg(this.isLiked ? "已按讚" : "已取消按讚");
+          } catch (e) {
+            this.bumpMsg("操作失敗，請稍後再試");
+          } finally {
+            this.submitting = false;
+          }
+        },
+      };
+    }
+
+    function initCommentCreateForms() {
+      document.querySelectorAll(".js-comment-create-form").forEach((form) => {
+        if (form.dataset.ajaxBound === "1") return;
+        form.dataset.ajaxBound = "1";
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn && submitBtn.disabled) return;
+          if (submitBtn) submitBtn.disabled = true;
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/json",
+              },
+            });
+            let data = {};
+            try {
+              data = await response.json();
+            } catch (parseErr) {
+              data = {};
+            }
+            if (!response.ok || data.ok !== true) {
+              const err = data.error || "送出失敗";
+              let tip = form.querySelector(".js-comment-form-tip");
+              if (!tip) {
+                tip = document.createElement("p");
+                tip.className = "js-comment-form-tip mt-1 text-xs text-rose-600";
+                form.appendChild(tip);
+              }
+              tip.textContent = err;
+              setTimeout(() => {
+                tip.textContent = "";
+              }, 3000);
+              return;
+            }
+            const article = form.closest("[data-post-article]");
+            const list = article ? article.querySelector("[data-post-comments-list]") : null;
+            const countEl = article ? article.querySelector("[data-post-comment-count]") : null;
+
+            const tmp = document.createElement("div");
+            tmp.innerHTML = data.html;
+            const fragment = tmp.firstElementChild;
+            if (!fragment) return;
+
+            if (data.parent_id) {
+              const parentEl = article && article.querySelector(`[data-comment-id="${data.parent_id}"]`);
+              if (parentEl) {
+                const childrenBox = parentEl.querySelector(`[data-comment-children="${data.parent_id}"]`);
+                if (childrenBox) {
+                  childrenBox.classList.remove("hidden");
+                  childrenBox.appendChild(fragment);
+                  if (window.Alpine && typeof window.Alpine.initTree === "function") {
+                    window.Alpine.initTree(fragment);
+                  }
+                  initCommentCreateForms();
+                }
+              }
+            } else if (list) {
+              const emptyPh = list.querySelector("[data-comments-empty-placeholder]");
+              if (emptyPh) emptyPh.remove();
+              list.appendChild(fragment);
+              if (window.Alpine && typeof window.Alpine.initTree === "function") {
+                window.Alpine.initTree(fragment);
+              }
+              initCommentCreateForms();
+            }
+
+            if (countEl && typeof data.comment_count === "number") {
+              countEl.textContent = `${data.comment_count} 留言`;
+            }
+            form.reset();
+            const okTip = form.querySelector(".js-comment-form-tip");
+            if (okTip) okTip.textContent = "";
+            const details = form.closest("details");
+            if (details) details.open = false;
+          } catch (e) {
+            form.submit();
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        });
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initCommentCreateForms();
+    });
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

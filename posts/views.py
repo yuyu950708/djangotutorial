@@ -8,6 +8,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Exists, OuterRef, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.utils import timezone
@@ -17,6 +18,14 @@ from urllib.parse import urlencode
 from .ai_chat import get_assistant_reply
 from .forms import CategoryForm, PostEditForm, PostForm, TagForm
 from .models import Category, Collection, CommentLike, Like, Post, PostComment, SearchLog, Tag
+
+
+def _wants_json(request):
+    """前端用 fetch 並帶 Accept: application/json（或 X-Requested-With）時，視為要 JSON 而非整頁導向。"""
+    return (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "").lower()
+    )
 
 
 def feed(request):
@@ -130,32 +139,51 @@ def feed(request):
 
 @login_required(login_url=settings.LOGIN_URL)
 def like_toggle(request, pk):
+    """
+    貼文按讚 / 取消按讚。
+    - 一般表單送出：處理完後導向上一頁或動態牆（會帶 Django message）。
+    - AJAX（fetch + Accept: application/json）：只回 JSON，不重新整理頁面。
+    """
+    # 依照網址上的主鍵找出貼文；找不到就回 404
     post = get_object_or_404(Post, pk=pk)
+
+    # 這個 view 只接受 POST（按鈕送出）；GET 就送回動態牆，避免誤觸網址改到資料
     if request.method != "POST":
         return redirect("posts:feed")
+
+    wants_json = _wants_json(request)
+
+    # 查目前使用者是否已經對這篇貼文按過讚（Like 是中介資料表）
     like = post.likes.filter(user=request.user).first()
+    # liked 表示「這次操作完成後，使用者是否處於已按讚狀態」
     liked = False
+
     if like:
+        # 已按讚 → 刪除那筆 Like，變成未按讚
         like.delete()
-        messages.info(request, "已取消按讚。")
+        liked = False
+        if not wants_json:
+            messages.info(request, "已取消按讚。")
     else:
+        # 未按讚 → 建立 Like（get_or_create 避免重複鍵錯誤）
         Like.objects.get_or_create(user=request.user, post=post)
         liked = True
-        messages.success(request, "已按讚。")
+        if not wants_json:
+            messages.success(request, "已按讚。")
+
+    # like_count 存在 Post 上，由 signal 維護；這裡從資料庫再讀一次確保數字最新
     post.refresh_from_db(fields=["like_count"])
-    wants_json = (
-        request.headers.get("x-requested-with") == "XMLHttpRequest"
-        or "application/json" in request.headers.get("accept", "")
-    )
+
     if wants_json:
+        # 非同步模式：只回兩個欄位，給前端 Alpine / fetch 更新畫面用
         return JsonResponse(
             {
-                "ok": True,
-                "liked": liked,
-                "like_count": post.like_count,
-                "button_label": "取消按讚" if liked else "按讚",
+                "is_liked": liked,  # 現在是否為「已按讚」
+                "like_count": post.like_count,  # 目前的讚數（整數）
             }
         )
+
+    # 一般表單模式：導回表單裡 hidden「next」指定的安全網址，否則回動態牆
     next_url = (request.POST.get("next") or "").strip()
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
@@ -167,13 +195,24 @@ def collect_toggle(request, pk):
     post = get_object_or_404(Post, pk=pk)
     if request.method != "POST":
         return redirect("posts:feed")
+
+    wants_json = _wants_json(request)
     collection = post.collections.filter(user=request.user).first()
+    collected = False
     if collection:
         collection.delete()
-        messages.info(request, "已取消收藏。")
+        collected = False
+        if not wants_json:
+            messages.info(request, "已取消收藏。")
     else:
         Collection.objects.get_or_create(user=request.user, post=post)
-        messages.success(request, "已收藏貼文。")
+        collected = True
+        if not wants_json:
+            messages.success(request, "已收藏貼文。")
+
+    if wants_json:
+        return JsonResponse({"is_collected": collected})
+
     next_url = (request.POST.get("next") or "").strip()
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
@@ -186,29 +225,24 @@ def comment_like_toggle(request, pk, comment_pk):
     comment = get_object_or_404(PostComment, pk=comment_pk, post_id=post.id)
     if request.method != "POST":
         return redirect("posts:post_detail", pk=pk)
+
+    wants_json = _wants_json(request)
     existing = CommentLike.objects.filter(user=request.user, comment=comment).first()
     if existing:
         existing.delete()
         liked = False
-        messages.info(request, "已取消留言按讚。")
+        if not wants_json:
+            messages.info(request, "已取消留言按讚。")
     else:
         CommentLike.objects.get_or_create(user=request.user, comment=comment)
         liked = True
-        messages.success(request, "已對留言按讚。")
+        if not wants_json:
+            messages.success(request, "已對留言按讚。")
     comment.refresh_from_db(fields=["like_count"])
-    wants_json = (
-        request.headers.get("x-requested-with") == "XMLHttpRequest"
-        or "application/json" in request.headers.get("accept", "")
-    )
+
     if wants_json:
-        return JsonResponse(
-            {
-                "ok": True,
-                "liked": liked,
-                "like_count": comment.like_count,
-                "button_label": "取消按讚" if liked else "按讚",
-            }
-        )
+        return JsonResponse({"is_liked": liked, "like_count": comment.like_count})
+
     next_url = (request.POST.get("next") or "").strip()
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
@@ -218,8 +252,13 @@ def comment_like_toggle(request, pk, comment_pk):
 @login_required(login_url=settings.LOGIN_URL)
 def comment_create(request, pk):
     post = get_object_or_404(Post, pk=pk)
+    wants_json = _wants_json(request)
+
     if request.method != "POST":
+        if wants_json:
+            return JsonResponse({"ok": False, "error": "不支援的請求方式。"}, status=405)
         return redirect("posts:feed")
+
     content = (request.POST.get("content") or "").strip()
     parent_id_raw = (request.POST.get("parent_id") or "").strip()
 
@@ -230,24 +269,60 @@ def comment_create(request, pk):
     if parent_id_raw.isdigit():
         parent = get_object_or_404(PostComment, pk=int(parent_id_raw), post_id=post.id)
         if parent.is_locked:
-            parent = None
-            messages.error(request, "此留言已鎖定，無法回覆。")
+            msg = "此留言已鎖定，無法回覆。"
+            if wants_json:
+                return JsonResponse({"ok": False, "error": msg}, status=400)
+            messages.error(request, msg)
+            next_url = (request.POST.get("next") or "").strip()
+            if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+                return redirect(next_url)
+            return redirect("posts:feed")
 
-    if content:
-        comment = PostComment.objects.create(
-            post=post,
-            author=request.user,
-            content=content,
-            parent=parent,
-        )
-        if parent:
-            comment.root_id = parent.root_id or parent.id
-        else:
-            comment.root_id = comment.id
-        comment.save(update_fields=["root"])
-        messages.success(request, "留言已送出。")
-    else:
+    if not content:
+        if wants_json:
+            return JsonResponse({"ok": False, "error": "留言內容不可為空。"}, status=400)
         messages.error(request, "留言內容不可為空。")
+        next_url = (request.POST.get("next") or "").strip()
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+            return redirect(next_url)
+        return redirect("posts:feed")
+
+    comment = PostComment.objects.create(
+        post=post,
+        author=request.user,
+        content=content,
+        parent=parent,
+    )
+    if parent:
+        comment.root_id = parent.root_id or parent.id
+    else:
+        comment.root_id = comment.id
+    comment.save(update_fields=["root"])
+
+    if wants_json:
+        comment = PostComment.objects.select_related("author", "author__profile").get(pk=comment.pk)
+        comment.replies = []
+        liked_comment_ids = list(
+            CommentLike.objects.filter(user=request.user, comment__post_id=post.id).values_list(
+                "comment_id", flat=True
+            )
+        )
+        html = render_to_string(
+            "posts/_comment_node.html",
+            {"node": comment, "post": post, "liked_comment_ids": liked_comment_ids},
+            request=request,
+        )
+        comment_count = PostComment.objects.filter(post_id=post.id).count()
+        return JsonResponse(
+            {
+                "ok": True,
+                "html": html,
+                "comment_count": comment_count,
+                "parent_id": parent.id if parent else None,
+            }
+        )
+
+    messages.success(request, "留言已送出。")
     next_url = (request.POST.get("next") or "").strip()
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)

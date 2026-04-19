@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="mx-auto w-full max-w-3xl">
-  <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
+  <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5" data-post-article>
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
         <h1 class="break-words text-lg font-semibold sm:text-xl">{{ post.title|default:"（未命名貼文）" }}</h1>
@@ -38,43 +38,69 @@
       <img src="{{ post.image.url }}" alt="" class="mt-3 w-full rounded-lg object-cover">
     {% endif %}
 
-    <div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-      <span data-like-count>{{ post.likes.count }} 讚</span>
-      <span>{{ post.post_comments.count }} 留言</span>
-    </div>
+    {% if user.is_authenticated %}
+      {# 與動態牆相同：Alpine 狀態 + fetch，按讚不整頁重新整理 #}
+      <div class="mt-4 space-y-2" x-data="postInteractBlock({{ is_liked|yesno:'true,false' }}, {{ post.like_count }}, {{ is_collected|yesno:'true,false' }})">
+        <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+          <span x-text="count + ' 讚'"></span>
+          <span data-post-comment-count>{{ post.post_comments.count }} 留言</span>
+        </div>
+        <p x-show="showMsg" x-cloak class="text-xs text-slate-500" x-text="msgText"></p>
+        <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
+          <form
+            method="post"
+            action="{% url 'posts:like_toggle' post.pk %}"
+            class="w-full sm:w-auto"
+            @submit.prevent="submitLike"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button
+              type="submit"
+              class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto"
+              :disabled="submittingLike"
+              x-text="isLiked ? '取消按讚' : '按讚'"
+            ></button>
+          </form>
+          <form
+            method="post"
+            action="{% url 'posts:collect_toggle' post.pk %}"
+            class="w-full sm:w-auto"
+            @submit.prevent="submitCollect"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button
+              type="submit"
+              class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
+              :disabled="submittingCollect"
+              x-text="isCollected ? '取消收藏' : '收藏'"
+            ></button>
+          </form>
+        </div>
+      </div>
+    {% else %}
+      <div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+        <span>{{ post.like_count }} 讚</span>
+        <span>{{ post.post_comments.count }} 留言</span>
+      </div>
+    {% endif %}
 
     {% if user.is_authenticated %}
-      <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
-        <form method="post" action="{% url 'posts:like_toggle' post.pk %}" class="w-full sm:w-auto js-like-form">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" data-like-button class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto">
-            {% if is_liked %}取消按讚{% else %}按讚{% endif %}
-          </button>
-        </form>
-        <form method="post" action="{% url 'posts:collect_toggle' post.pk %}" class="w-full sm:w-auto">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">
-            {% if is_collected %}取消收藏{% else %}收藏{% endif %}
-          </button>
-        </form>
-      </div>
-
       <hr class="my-5 border-slate-200">
 
       <div>
         <h2 class="text-base font-semibold">留言</h2>
 
-        <div class="mt-3 space-y-3">
+        <div class="mt-3 space-y-3" data-post-comments-list>
           {% for node in comment_roots %}
             {% include "posts/_comment_node.html" with node=node %}
           {% empty %}
-            <p class="text-sm text-slate-400">目前沒有留言</p>
+            <p class="text-sm text-slate-400" data-comments-empty-placeholder>目前沒有留言</p>
           {% endfor %}
         </div>
 
-        <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="mt-4">
+        <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="js-comment-create-form mt-4">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
@@ -96,54 +122,5 @@
     {% endif %}
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const bindAjaxForm = (formSelector, buttonSelector, countSelector) => {
-      document.querySelectorAll(formSelector).forEach((form) => {
-        form.addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const button = form.querySelector(buttonSelector);
-          if (!button) {
-            form.submit();
-            return;
-          }
-          if (button.disabled) return;
-          button.disabled = true;
-          try {
-            const response = await fetch(form.action, {
-              method: "POST",
-              body: new FormData(form),
-              headers: {
-                "X-Requested-With": "XMLHttpRequest",
-                Accept: "application/json",
-              },
-            });
-            if (!response.ok) throw new Error("bad response");
-            const data = await response.json();
-            if (!data || !data.ok) throw new Error("bad payload");
-            button.textContent = data.button_label;
-            let scope = form.parentElement;
-            while (scope && !scope.querySelector(countSelector)) {
-              scope = scope.parentElement;
-            }
-            const likeCountEl = scope ? scope.querySelector(countSelector) : null;
-            if (likeCountEl) likeCountEl.textContent = `${data.like_count} 讚`;
-          } catch (error) {
-            form.submit();
-            return;
-          } finally {
-            button.disabled = false;
-          }
-        });
-      });
-    };
-
-    bindAjaxForm(".js-like-form", "[data-like-button]", "[data-like-count]");
-    bindAjaxForm(".js-comment-like-form", "[data-comment-like-button]", "[data-comment-like-count]");
-  });
-</script>
 {% endblock %}
 
