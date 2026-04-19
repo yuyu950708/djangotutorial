@@ -5,50 +5,47 @@ from posts.models import Category, Tag
 
 DEFAULT_CATEGORIES = [
     "早餐",
-    "早午餐",
-    "午餐",
-    "下午茶",
-    "晚餐",
+    "正餐",
     "宵夜",
-    "甜點",
-    "零食",
+    "甜點 / 零食",
     "飲料 / 手搖",
     "輕食 / 沙拉",
 ]
 
 DEFAULT_TAGS = [
-    "中式 / 台式",
-    "日韓料理",
-    "異國 / 西式",
+    "酸",
+    "甜",
+    "苦",
+    "辣",
     "小資平價",
     "約會聚餐",
-    "快速外帶",
+    "異國料理",
     "健康低卡",
     "素食友善",
-    "無辣不歡",
     "踩雷勿近",
+    "氣氛佳",
 ]
 
 
 class Command(BaseCommand):
-    help = "建立預設類別(Category)與標籤(Tag)資料"
+    help = "清空並重建預設類別(Category)與標籤(Tag)資料"
 
     def handle(self, *args, **options):
-        created_categories = 0
-        created_tags = 0
+        Category.objects.all().delete()
+        Tag.objects.all().delete()
 
+        n_cat = 0
         for name in DEFAULT_CATEGORIES:
-            _, created = Category.objects.get_or_create(name=name)
-            if created:
-                created_categories += 1
+            Category.objects.create(name=name)
+            n_cat += 1
 
+        n_tag = 0
         for name in DEFAULT_TAGS:
-            _, created = Tag.objects.get_or_create(name=name)
-            if created:
-                created_tags += 1
+            Tag.objects.create(name=name)
+            n_tag += 1
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"完成！新增 {created_categories} 筆類別、{created_tags} 筆標籤。"
+                f"完成！已清空舊資料並建立 {n_cat} 筆類別、{n_tag} 筆標籤。"
             )
         )
