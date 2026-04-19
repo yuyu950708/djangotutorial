@@ -40,20 +40,39 @@
         <a href="{% url 'posts:feed' %}" class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">清除</a>
       </div>
 
-      <div class="grid gap-2 sm:col-span-2 sm:grid-cols-2">
-        <select name="category" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm">
-          <option value="">全部分類</option>
-          {% for c in categories %}
-            <option value="{{ c.id }}" {% if selected_category|default:'' == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
-        <select name="tag" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm">
-          <option value="">全部標籤</option>
-          {% for t in tags %}
-            <option value="{{ t.id }}" {% if selected_tag|default:'' == t.id|stringformat:'s' %}selected{% endif %}>#{{ t.name }}</option>
-          {% endfor %}
-        </select>
+      <div class="grid gap-3 sm:col-span-2 sm:grid-cols-2">
+        <div>
+          <label for="feed-category" class="mb-1 block text-sm font-medium text-slate-600">分類</label>
+          <select
+            id="feed-category"
+            name="category"
+            multiple
+            size="5"
+            class="w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 outline-none ring-sky-200 focus:ring"
+            aria-describedby="feed-filter-hint"
+          >
+            {% for c in categories %}
+              <option value="{{ c.id }}" {% if c.id in selected_category_ids %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="feed-tag" class="mb-1 block text-sm font-medium text-slate-600">標籤</label>
+          <select
+            id="feed-tag"
+            name="tag"
+            multiple
+            size="5"
+            class="w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 outline-none ring-sky-200 focus:ring"
+            aria-describedby="feed-filter-hint"
+          >
+            {% for t in tags %}
+              <option value="{{ t.id }}" {% if t.id in selected_tag_ids %}selected{% endif %}>#{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
+      <p id="feed-filter-hint" class="text-xs text-slate-500 sm:col-span-2">可複選：按住 Ctrl再點選多項；不選表示不限。</p>
     </form>
 
     {% if search_query %}

@@ -28,6 +28,22 @@ def _wants_json(request):
     )
 
 
+def _parse_positive_id_list(values):
+    """從 GET 多值參數整理出不重複的正整數 id 列表（保順序）。"""
+    seen = set()
+    out = []
+    for raw in values:
+        s = str(raw).strip()
+        if not s.isdigit():
+            continue
+        pk = int(s)
+        if pk <= 0 or pk in seen:
+            continue
+        seen.add(pk)
+        out.append(pk)
+    return out
+
+
 def _annotate_subtree_reply_counts(nodes):
     """
     為樹狀留言的每個 node 設定 subtree_reply_count：
@@ -47,8 +63,8 @@ def _annotate_subtree_reply_counts(nodes):
 
 def feed(request):
     search_query = (request.GET.get("q") or "").strip()
-    category_id = (request.GET.get("category") or "").strip()
-    tag_id = (request.GET.get("tag") or "").strip()
+    category_ids = _parse_positive_id_list(request.GET.getlist("category"))
+    tag_ids = _parse_positive_id_list(request.GET.getlist("tag"))
     page_number = (request.GET.get("page") or "").strip()
 
     if len(search_query) > 100:
@@ -90,10 +106,14 @@ def feed(request):
             if last is None or last.created_at < timezone.now() - timedelta(seconds=30):
                 SearchLog.objects.create(user=request.user, keyword=search_query)
 
-    if category_id.isdigit():
-        posts = posts.filter(category_id=int(category_id))
-    if tag_id.isdigit():
-        posts = posts.filter(tags__id=int(tag_id)).distinct()
+    if category_ids:
+        valid_cats = list(Category.objects.filter(id__in=category_ids).values_list("id", flat=True))
+        if valid_cats:
+            posts = posts.filter(category_id__in=valid_cats)
+    if tag_ids:
+        valid_tags = list(Tag.objects.filter(id__in=tag_ids).values_list("id", flat=True))
+        if valid_tags:
+            posts = posts.filter(tags__id__in=valid_tags).distinct()
     # annotate / distinct 會讓預設 Meta.ordering 失效，須明確指定：最新貼文在上
     posts = posts.order_by("-created_at", "-id")
 
@@ -148,8 +168,8 @@ def feed(request):
             "results_count": paginator.count,
             "categories": Category.objects.all(),
             "tags": Tag.objects.all(),
-            "selected_category": category_id,
-            "selected_tag": tag_id,
+            "selected_category_ids": category_ids,
+            "selected_tag_ids": tag_ids,
             "liked_comment_ids": liked_comment_ids,
         },
     )
