@@ -9,7 +9,7 @@ document.addEventListener("alpine:init", () => {
     sending: false,
     pendingFile: null,
     pendingPreview: null,
-    quickPrompts: ["今晚吃什麼？", "兩人聚餐預算 800 怎麼點？", "少油少鹽可以怎麼吃？"],
+    quickPrompts: ["等等吃啥？", "月底吃土只有預算 100 怎麼吃？", "少油少鹽可以怎麼吃？"],
 
     init() {
       this.resetWelcome();
