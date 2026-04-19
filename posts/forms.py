@@ -45,18 +45,61 @@ _CSS_SANITIZER = CSSSanitizer(
     allowed_css_properties=ALLOWED_CSS_PROPERTIES | _EXTRA_CSS,
 )
 
+_MAX_GALLERY_FILES = 3
+_MAX_IMAGE_BYTES = 5 * 1024 * 1024
+_ALLOWED_IMAGE_TYPES = frozenset({"image/jpeg", "image/png", "image/gif", "image/webp"})
+
+
+class MultiImageInput(forms.FileInput):
+    """讓同一個欄位名稱可收到瀏覽器 multiple 上傳的多個檔案。"""
+
+    allow_multiple_selected = True
+
+    def value_from_datadict(self, data, files, name):
+        if files is not None:
+            return files.getlist(name)
+        return []
+
+
+class MultiImageField(forms.Field):
+    """非 Model 欄位：整理成 UploadedFile 清單並做數量／型別檢查。"""
+
+    widget = MultiImageInput
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("required", False)
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data):
+        if not data:
+            return []
+        files = [f for f in data if f and getattr(f, "name", "")]
+        if len(files) > _MAX_GALLERY_FILES:
+            raise forms.ValidationError(f"最多只能上傳 {_MAX_GALLERY_FILES} 張圖片。")
+        for f in files:
+            if f.size > _MAX_IMAGE_BYTES:
+                raise forms.ValidationError("單張圖片請勿超過 5MB。")
+            ct = (getattr(f, "content_type", "") or "").lower()
+            if ct and ct not in _ALLOWED_IMAGE_TYPES:
+                raise forms.ValidationError("只支援 JPEG、PNG、GIF、WebP 圖檔。")
+        return files
+
 
 class PostForm(forms.ModelForm):
+    gallery = MultiImageField(
+        label="貼文附圖（可選，按住 Ctrl / Shift 可一次選最多 3 張）",
+        widget=MultiImageInput(
+            attrs={
+                "multiple": True,
+                "accept": "image/*",
+                "class": "block w-full cursor-pointer rounded-lg border border-slate-300 text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700 hover:file:bg-slate-200",
+            }
+        ),
+    )
+
     class Meta:
         model = Post
-        fields = ("content", "image")
-        widgets = {
-            "image": forms.ClearableFileInput(
-                attrs={
-                    "class": "block w-full cursor-pointer rounded-lg border border-slate-300 text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700 hover:file:bg-slate-200",
-                }
-            ),
-        }
+        fields = ("content",)
 
     def clean_content(self):
         value = self.cleaned_data.get("content") or ""
@@ -71,6 +114,21 @@ class PostForm(forms.ModelForm):
             css_sanitizer=_CSS_SANITIZER,
             strip=True,
         )
+
+    def save(self, commit=True):
+        post = super().save(commit=False)
+        files = self.cleaned_data.get("gallery") or []
+        if files:
+            post.image = files[0]
+            post.image2 = files[1] if len(files) > 1 else None
+            post.image3 = files[2] if len(files) > 2 else None
+            if len(files) < 2:
+                post.image2 = None
+            if len(files) < 3:
+                post.image3 = None
+        if commit:
+            post.save()
+        return post
 
 
 class PostEditForm(PostForm):
@@ -98,7 +156,7 @@ class PostEditForm(PostForm):
 
     class Meta:
         model = Post
-        fields = ("title", "category", "tags", "content", "image")
+        fields = ("title", "category", "tags", "content")
         widgets = {
             "title": forms.TextInput(
                 attrs={
@@ -114,11 +172,6 @@ class PostEditForm(PostForm):
             "tags": forms.SelectMultiple(
                 attrs={
                     "class": "min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm",
-                }
-            ),
-            "image": forms.ClearableFileInput(
-                attrs={
-                    "class": "block w-full cursor-pointer rounded-lg border border-slate-300 text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700 hover:file:bg-slate-200",
                 }
             ),
         }

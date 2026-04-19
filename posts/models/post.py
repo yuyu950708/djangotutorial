@@ -23,9 +23,21 @@ class Post(models.Model):
     title = models.CharField(_("標題"), max_length=255, blank=True)
     content = RichTextUploadingField(_("內容"))
     image = models.ImageField(
-        _("圖片"),
+        _("圖片 1"),
         upload_to="posts/",
         db_column="image_url",
+        blank=True,
+        null=True,
+    )
+    image2 = models.ImageField(
+        _("圖片 2"),
+        upload_to="posts/",
+        blank=True,
+        null=True,
+    )
+    image3 = models.ImageField(
+        _("圖片 3"),
+        upload_to="posts/",
         blank=True,
         null=True,
     )
@@ -43,3 +55,11 @@ class Post(models.Model):
     def __str__(self) -> str:
         headline = self.title or self.content[:20]
         return f"Post({self.author.username}: {headline})"
+
+    def gallery_images(self):
+        """依序回傳已上傳的貼文附圖（最多三張，不含內文編輯器裡的圖）。"""
+        out = []
+        for f in (self.image, self.image2, self.image3):
+            if f:
+                out.append(f)
+        return out

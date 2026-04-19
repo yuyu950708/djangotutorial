@@ -121,9 +121,9 @@
             {% if form.content.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.content.errors.0 }}</p>{% endif %}
           </div>
           <div class="mb-4">
-            <label for="{{ form.image.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">圖片（可選）</label>
-            {{ form.image }}
-            {% if form.image.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.image.errors.0 }}</p>{% endif %}
+            <label for="{{ form.gallery.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">貼文附圖（可選，最多 3 張）</label>
+            {{ form.gallery }}
+            {% if form.gallery.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.gallery.errors.0 }}</p>{% endif %}
           </div>
           <button type="submit" class="min-h-11 w-full rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-600 sm:w-auto">發布</button>
         </form>
@@ -177,15 +177,15 @@
           {{ post.content|safe }}
         </div>
 
-        {% if post.image %}
+        {% for img in post.gallery_images %}
           <div class="mb-2 flex w-full justify-center">
             <img
-              src="{{ post.image.url }}"
+              src="{{ img.url }}"
               alt=""
               class="max-h-[500px] w-auto max-w-full object-contain rounded-lg"
             >
           </div>
-        {% endif %}
+        {% endfor %}
 
         {% if user.is_authenticated %}
           {# Alpine：包一層，讓「讚數、按鈕文字、小提示」共用同一組狀態 #}

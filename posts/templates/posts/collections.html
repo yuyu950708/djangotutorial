@@ -59,9 +59,11 @@
           {{ post.content|safe }}
         </div>
 
-        {% if post.image %}
-          <img src="{{ post.image.url }}" alt="" class="mb-2 w-full max-h-[min(400px,60vh)] rounded-lg object-cover">
-        {% endif %}
+        {% for img in post.gallery_images %}
+          <div class="mb-2 flex w-full justify-center">
+            <img src="{{ img.url }}" alt="" class="max-h-[500px] w-auto max-w-full object-contain rounded-lg">
+          </div>
+        {% endfor %}
       </article>
     {% empty %}
       <div class="rounded-xl bg-white px-6 py-10 text-center text-slate-500 shadow sm:px-10 sm:py-12">
