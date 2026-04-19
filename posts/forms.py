@@ -49,6 +49,19 @@ _MAX_GALLERY_FILES = 3
 _MAX_IMAGE_BYTES = 5 * 1024 * 1024
 _ALLOWED_IMAGE_TYPES = frozenset({"image/jpeg", "image/png", "image/gif", "image/webp"})
 
+# Django 5+ CheckboxSelectMultiple 外層是 div>div>label（非 ul/li），樣式集中寫在 widget 外層 class。
+_TAGS_CHECKBOX_OUTER_CLASS = (
+    "flex flex-wrap gap-3 "
+    "[&>div]:m-0 [&>div]:p-0 "
+    "[&>div>label]:inline-flex [&>div>label]:max-w-full [&>div>label]:cursor-pointer [&>div>label]:items-center [&>div>label]:gap-2 "
+    "[&>div>label]:rounded-full [&>div>label]:border [&>div>label]:border-slate-200 [&>div>label]:bg-white [&>div>label]:px-3 [&>div>label]:py-2 "
+    "[&>div>label]:text-sm [&>div>label]:font-medium [&>div>label]:text-slate-700 [&>div>label]:shadow-sm [&>div>label]:transition-colors "
+    "hover:[&>div>label]:border-sky-300 hover:[&>div>label]:bg-sky-50 "
+    "[&>div>label:has(input:checked)]:border-sky-500 [&>div>label:has(input:checked)]:bg-sky-50 [&>div>label:has(input:checked)]:text-sky-800 "
+    "[&_input]:h-4 [&_input]:w-4 [&_input]:shrink-0 [&_input]:rounded [&_input]:border-slate-300 [&_input]:accent-sky-500 "
+    "[&_input]:focus:ring-2 [&_input]:focus:ring-sky-400 [&_input]:focus:ring-offset-0"
+)
+
 
 class MultiImageInput(forms.FileInput):
     """讓同一個欄位名稱可收到瀏覽器 multiple 上傳的多個檔案。"""
@@ -169,11 +182,7 @@ class PostEditForm(PostForm):
                     "class": "min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm",
                 }
             ),
-            "tags": forms.SelectMultiple(
-                attrs={
-                    "class": "min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm",
-                }
-            ),
+            "tags": forms.CheckboxSelectMultiple(attrs={"class": _TAGS_CHECKBOX_OUTER_CLASS}),
         }
 
     def clean_new_category(self):
