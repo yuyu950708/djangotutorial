@@ -28,6 +28,23 @@ def _wants_json(request):
     )
 
 
+def _annotate_subtree_reply_counts(nodes):
+    """
+    為樹狀留言的每個 node 設定 subtree_reply_count：
+    從該則留言往下整串分支的「回覆總則數」（不含自己，含所有層級的子回覆）。
+    """
+
+    def count_under(node):
+        total = 0
+        for child in node.replies:
+            total += 1 + count_under(child)
+        node.subtree_reply_count = total
+        return total
+
+    for node in nodes:
+        count_under(node)
+
+
 def feed(request):
     search_query = (request.GET.get("q") or "").strip()
     category_id = (request.GET.get("category") or "").strip()
@@ -116,6 +133,7 @@ def feed(request):
                 by_id[c.parent_id].replies.append(c)
             else:
                 roots.append(c)
+        _annotate_subtree_reply_counts(roots)
         p.comment_roots = roots
 
     return render(
@@ -302,6 +320,7 @@ def comment_create(request, pk):
     if wants_json:
         comment = PostComment.objects.select_related("author", "author__profile").get(pk=comment.pk)
         comment.replies = []
+        _annotate_subtree_reply_counts([comment])
         liked_comment_ids = list(
             CommentLike.objects.filter(user=request.user, comment__post_id=post.id).values_list(
                 "comment_id", flat=True
@@ -396,6 +415,8 @@ def post_detail(request, pk):
             by_id[c.parent_id].replies.append(c)
         else:
             roots.append(c)
+
+    _annotate_subtree_reply_counts(roots)
 
     liked_comment_ids = []
     if request.user.is_authenticated:
