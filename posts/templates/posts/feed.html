@@ -173,12 +173,18 @@
           <h2 class="mb-2 break-words text-base font-semibold sm:text-lg">{{ post.title }}</h2>
         {% endif %}
 
-        <div class="post-body mb-2 max-w-full overflow-x-auto break-words leading-relaxed [&_img]:my-2 [&_img]:max-h-[min(400px,60vh)] [&_img]:max-w-full [&_img]:rounded-lg [&_img]:object-contain [&_p]:mb-2 [&_table]:max-w-full [&_table]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
+        <div class="post-body mb-2 max-w-full overflow-x-auto break-words leading-relaxed [&_img]:mx-auto [&_img]:my-2 [&_img]:block [&_img]:h-auto [&_img]:max-h-[500px] [&_img]:w-auto [&_img]:max-w-full [&_img]:rounded-lg [&_img]:object-contain [&_p]:mb-2 [&_table]:max-w-full [&_table]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
           {{ post.content|safe }}
         </div>
 
         {% if post.image %}
-          <img src="{{ post.image.url }}" alt="" class="mb-2 w-full max-h-[min(400px,60vh)] rounded-lg object-cover">
+          <div class="mb-2 flex w-full justify-center">
+            <img
+              src="{{ post.image.url }}"
+              alt=""
+              class="max-h-[500px] w-auto max-w-full object-contain rounded-lg"
+            >
+          </div>
         {% endif %}
 
         {% if user.is_authenticated %}
