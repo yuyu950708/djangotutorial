@@ -104,13 +104,18 @@
                   ? 'rounded-br-md bg-sky-500 text-white'
                   : 'rounded-bl-md border border-slate-100 bg-white text-slate-800'"
               >
-                <img
-                  x-show="m.image"
-                  :src="m.image"
-                  alt=""
-                  class="mb-2 max-h-44 w-full rounded-lg object-cover"
-                />
-                <p class="whitespace-pre-wrap break-words" x-text="m.text"></p>
+                <template x-if="m.image">
+                  <img
+                    :src="m.image"
+                    alt=""
+                    class="mb-2 max-h-44 w-full rounded-lg object-cover"
+                  />
+                </template>
+                <p
+                  class="break-words leading-relaxed [&_strong]:font-semibold"
+                  :class="m.role === 'user' ? '[&_strong]:font-bold [&_strong]:text-white' : ''"
+                  x-html="m.html"
+                ></p>
               </div>
             </div>
           </div>

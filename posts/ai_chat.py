@@ -30,6 +30,7 @@ SYSTEM_PROMPT = """你是「等等吃啥」網站的 AI 美食助理。
 - 針對美食、餐廳、聚餐、料理、營養與飲食建議提供具體可執行的回答。
 - 如果使用者上傳食物照片：先描述你看到的內容，再估算大概熱量（若不確定要說明假設與不確定性）。
 - 資訊不足時先問 1–3 個問題釐清。
+- 回答請務必簡明扼要，除非使用者要求，否則請保持在 150 字以內。
 """
 
 
@@ -212,7 +213,7 @@ def call_nvidia_chat_completions(
     invoke_url: str = DEFAULT_NVIDIA_INVOKE_URL,
     temperature: float = 0.4,
     top_p: float = 0.95,
-    max_tokens: int = 512,
+    max_tokens: int = 200,
 ) -> str:
     key = (api_key or "").strip()
     if not key:
@@ -342,7 +343,7 @@ def call_gemini_generate(contents: list[dict[str, Any]], *, model: str, api_key:
     body: dict[str, Any] = {
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
         "contents": contents,
-        "generationConfig": {"maxOutputTokens": 1024},
+        "generationConfig": {"maxOutputTokens": 200},
     }
     url = GEMINI_GENERATE_URL.format(model=model) + f"?key={quote(key, safe='')}"
     req = urllib.request.Request(
