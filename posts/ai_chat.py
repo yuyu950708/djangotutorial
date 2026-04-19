@@ -9,6 +9,7 @@ Providers:
 from __future__ import annotations
 
 import base64
+import binascii
 import io
 import json
 import os
@@ -55,6 +56,64 @@ def _normalize_history(history: list[Any]) -> list[dict[str, str]]:
     return out
 
 
+# 前端解碼後、以及 multipart 上傳時允許的 MIME（與 views 驗證一致）
+_ALLOWED_IMAGE_MIMES = frozenset({"image/jpeg", "image/png", "image/gif", "image/webp"})
+
+
+def decode_client_image_base64(image_base64: str | None) -> tuple[str, bytes] | None:
+    """
+    將前端 `FileReader.readAsDataURL` 或純 Base64 字串還原成 (mime, 原始位元組)。
+
+    - Data URL：`data:image/png;base64,XXXX` → 會去掉 `data:` 與 `;base64,` 前綴，只把 XXXX 解碼。
+    - 純 base64：MIME 預設為 image/jpeg（建議前端仍傳 Data URL 以便辨識格式）。
+    - 若欄位為空字串 / None → 回傳 None（表示本則訊息沒有附圖）。
+    - 若偵測到 blob: 或 http(s):（常見誤傳「路徑」）→ 拋 ValueError。
+    """
+    if image_base64 is None or not isinstance(image_base64, str):
+        return None
+    s = image_base64.strip()
+    if not s:
+        return None
+
+    lowered = s.lower()
+    if lowered.startswith("blob:") or lowered.startswith("http://") or lowered.startswith("https://"):
+        raise ValueError("圖片必須以 Base64 傳送，請勿使用 blob 或網址路徑。")
+
+    mime = "image/jpeg"
+    if s.startswith("data:"):
+        # 格式：data:[<mediatype>][;parameters];base64,<data>
+        try:
+            header, b64_payload = s.split(",", 1)
+        except ValueError as exc:
+            raise ValueError("圖片 Data URL 格式無效。") from exc
+        if ";base64" not in header.lower():
+            raise ValueError("圖片必須為 base64 的 Data URL（需含 ;base64,）。")
+        semi = header.find(";")
+        if semi > 5:
+            candidate = header[5:semi].strip().lower()
+            if candidate:
+                mime = candidate
+        b64_str = "".join(b64_payload.split())
+    else:
+        # 純 base64（無 data: 前綴）
+        b64_str = "".join(s.split())
+
+    try:
+        raw = base64.b64decode(b64_str, validate=True)
+    except (binascii.Error, ValueError):
+        pad = (-len(b64_str)) % 4
+        try:
+            raw = base64.b64decode(b64_str + ("=" * pad), validate=False)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("圖片 Base64 解碼失敗，請確認檔案是否完整。") from exc
+
+    if not raw:
+        raise ValueError("解碼後的圖片內容為空。")
+    if mime not in _ALLOWED_IMAGE_MIMES:
+        raise ValueError("不支援的圖片格式，請使用 JPG、PNG、GIF 或 WebP。")
+    return (mime, raw)
+
+
 # =========================
 # NVIDIA Integrate (OpenAI-style)
 # =========================
@@ -68,17 +127,12 @@ def _nvidia_key_from_env() -> str:
     return (os.environ.get("NVIDIA_API_KEY") or os.environ.get("api_key") or "").strip()
 
 
-def _nvidia_inline_image_data_url(image) -> tuple[str, str]:
+def _nvidia_compress_to_jpeg_b64(raw: bytes, *, mime_hint: str | None) -> tuple[str, str]:
     """
-    NVIDIA Integrate docs mention large image payloads may require Asset APIs.
-    To avoid gateway 5xx (e.g. 502), downscale/compress aggressively.
-
-    Returns (mime, base64).
+    將圖片位元組壓成較小的 JPEG base64（無 data: 前綴），降低 NVIDIA gateway 502 風險。
+    回傳 (mime, base64字串)。
     """
-    raw = image.read()
-    image.seek(0)
-
-    target_bytes = 120 * 1024  # base64 overhead ~33%, keep JSON reasonably small
+    target_bytes = 120 * 1024  # base64 膨脹約 33%，控制 JSON 體積
 
     try:
         from PIL import Image
@@ -109,19 +163,25 @@ def _nvidia_inline_image_data_url(image) -> tuple[str, str]:
         b64 = base64.b64encode(data if data else raw).decode("ascii")
         return ("image/jpeg", b64)
     except Exception:
-        mime = (getattr(image, "content_type", None) or "image/jpeg").lower()
-        if mime not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
+        mime = (mime_hint or "image/jpeg").lower()
+        if mime not in _ALLOWED_IMAGE_MIMES:
             mime = "image/jpeg"
         b64 = base64.b64encode(raw).decode("ascii")
         return (mime, b64)
 
 
-def _build_nvidia_messages(history: list[dict[str, str]], message: str, image) -> list[dict[str, Any]]:
+def _build_nvidia_messages(
+    history: list[dict[str, str]],
+    message: str,
+    image: tuple[str, bytes] | None,
+) -> list[dict[str, Any]]:
     """
-    Build messages for NVIDIA Integrate.
+    組 NVIDIA / OpenAI 相容的 chat/completions 訊息。
 
-    For images, use string content with an HTML <img src="data:...;base64,..."/> tag.
-    This matches NVIDIA Integrate docs for passing base64 images with role=user.
+    有圖片時使用官方視覺格式（多段 content）：
+    - 文字：`{"type":"text","text":"..."}`
+    - 圖片：`{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,..."}}`
+    勿再嵌入 HTML `<img>`，避免模型只當成無效字串。
     """
     messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
     for h in history:
@@ -129,9 +189,14 @@ def _build_nvidia_messages(history: list[dict[str, str]], message: str, image) -
 
     text = (message or "").strip()[:MAX_MESSAGE_CHARS]
     if image:
-        mime, b64 = _nvidia_inline_image_data_url(image)
+        mime_hint, raw_bytes = image
+        mime, b64 = _nvidia_compress_to_jpeg_b64(raw_bytes, mime_hint=mime_hint)
         prompt = text or "請描述這張圖片，並估算大概熱量（若不確定請說明理由與假設）。"
-        content = f'{prompt}\n<img src="data:{mime};base64,{b64}" />'
+        # OpenAI Vision / NVIDIA 相容：data URL 放在 image_url.url
+        content: list[dict[str, Any]] = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+        ]
         messages.append({"role": "user", "content": content})
     else:
         messages.append({"role": "user", "content": text})
@@ -244,7 +309,7 @@ def _gemini_role(role: str) -> str | None:
 def _build_gemini_contents(
     history: list[dict[str, str]],
     message: str,
-    image,
+    image: tuple[str, bytes] | None,
 ) -> list[dict[str, Any]]:
     contents: list[dict[str, Any]] = []
     for h in history:
@@ -254,16 +319,13 @@ def _build_gemini_contents(
         contents.append({"role": gr, "parts": [{"text": h["content"]}]})
 
     if image:
-        raw = image.read()
-        image.seek(0)
+        mime, raw = image
+        # Gemini REST：inlineData.mimeType + data；data 僅為純 base64，不含 data:image/... 前綴
         b64 = base64.b64encode(raw).decode("ascii")
-        mime = getattr(image, "content_type", None) or "image/jpeg"
-        if mime not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
-            mime = "image/jpeg"
         text_part = (message or "請描述這張圖片並給出飲食建議。").strip()[:MAX_MESSAGE_CHARS]
         parts: list[dict[str, Any]] = [
             {"text": text_part},
-            {"inline_data": {"mime_type": mime, "data": b64}},
+            {"inlineData": {"mimeType": mime, "data": b64}},
         ]
     else:
         parts = [{"text": (message or "你好").strip()[:MAX_MESSAGE_CHARS]}]
@@ -324,7 +386,15 @@ def call_gemini_generate(contents: list[dict[str, Any]], *, model: str, api_key:
 # =========================
 
 
-def get_assistant_reply(*, message: str, image, history: list[Any]) -> str:
+def get_assistant_reply(
+    *,
+    message: str,
+    image: tuple[str, bytes] | None,
+    history: list[Any],
+) -> str:
+    """
+    image: 已由 view 解出之 (mime_type, raw_bytes)；無圖則為 None。
+    """
     hist = _normalize_history(history)
 
     nvidia_key = (getattr(settings, "NVIDIA_API_KEY", "") or "").strip() or _nvidia_key_from_env()
@@ -334,7 +404,7 @@ def get_assistant_reply(*, message: str, image, history: list[Any]) -> str:
     gemini_key = (getattr(settings, "GEMINI_API_KEY", "") or "").strip()
     gemini_model = getattr(settings, "GEMINI_MODEL", "gemini-2.0-flash")
 
-    # Prefer NVIDIA if configured (supports images via embedded <img> base64)
+    # Prefer NVIDIA（OpenAI 相容 vision：image_url + data URL）
     if nvidia_key:
         msgs = _build_nvidia_messages(hist, message, image)
         return call_nvidia_chat_completions(messages=msgs, api_key=nvidia_key, model=nvidia_model, invoke_url=nvidia_url)
@@ -343,5 +413,5 @@ def get_assistant_reply(*, message: str, image, history: list[Any]) -> str:
         contents = _build_gemini_contents(hist, message, image)
         return call_gemini_generate(contents, model=gemini_model, api_key=gemini_key)
 
-    return _demo_reply(message, image)
+    return _demo_reply(message, bool(image))
 

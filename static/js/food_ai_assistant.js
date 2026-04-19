@@ -49,7 +49,8 @@ document.addEventListener("alpine:init", () => {
     },
 
     clearImage() {
-      if (this.pendingPreview) {
+      // 僅 blob: 預覽網址需要 revoke；data: URL 不必釋放
+      if (this.pendingPreview && String(this.pendingPreview).startsWith("blob:")) {
         URL.revokeObjectURL(this.pendingPreview);
       }
       this.pendingFile = null;
@@ -83,6 +84,18 @@ document.addEventListener("alpine:init", () => {
       return null;
     },
 
+    /**
+     * 用 FileReader 把檔案讀成 Data URL（內含 Base64）。
+     * 後端會解析 `data:<mime>;base64,<payload>`，不要只傳 blob: 或 /media/ 路徑。
+     */
+    fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result);
+        fr.onerror = () => reject(fr.error || new Error("讀取圖片失敗"));
+        fr.readAsDataURL(file);
+      });
+    },
     historyForApi() {
       return this.messages
         .filter((m) => !m.isWelcome && (m.role === "user" || m.role === "assistant"))
@@ -116,12 +129,28 @@ document.addEventListener("alpine:init", () => {
       const fileCopy = this.pendingFile;
       const previewCopy = this.pendingPreview;
 
-      const historyJson = JSON.stringify(this.historyForApi());
+      // 若有檔案：讀成 Base64（Data URL），供後端解碼後送進模型；絕不把 blob URL 當成圖片內容傳給 API
+      let imageBase64 = null;
+      let displayImage = previewCopy || null;
+      if (fileCopy) {
+        try {
+          imageBase64 = await this.fileToDataURL(fileCopy);
+          displayImage = imageBase64;
+        } catch (e) {
+          this.sending = false;
+          this.messages.push({
+            role: "assistant",
+            text: "抱歉：無法讀取圖片，請換一張再試。",
+          });
+          queueMicrotask(() => this.scrollToBottom());
+          return;
+        }
+      }
 
       this.messages.push({
         role: "user",
         text: text || (fileCopy ? "（已上傳圖片）" : ""),
-        image: previewCopy || null,
+        image: displayImage || null,
       });
       this.input = "";
       this.pendingFile = null;
@@ -129,18 +158,24 @@ document.addEventListener("alpine:init", () => {
       const fileInput = document.getElementById("food-ai-file");
       if (fileInput) fileInput.value = "";
 
-      const fd = new FormData();
-      fd.append("message", text || (fileCopy ? "（請看這張圖）" : ""));
-      fd.append("history", historyJson);
-      if (fileCopy) fd.append("image", fileCopy);
-
       const token = this.getCookie("csrftoken");
+      // JSON 傳送：history 為陣列；圖片為完整 Data URL（後端會去掉 data: 前綴只保留 raw base64 給 Gemini）
+      const body = {
+        message: text || (fileCopy ? "（請看這張圖）" : ""),
+        history: this.historyForApi(),
+      };
+      if (imageBase64) {
+        body.image_base64 = imageBase64;
+      }
 
       try {
         const res = await fetch(endpoint, {
           method: "POST",
-          headers: token ? { "X-CSRFToken": token } : {},
-          body: fd,
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "X-CSRFToken": token } : {}),
+          },
+          body: JSON.stringify(body),
           credentials: "same-origin",
         });
         const data = await res.json().catch(() => ({}));
