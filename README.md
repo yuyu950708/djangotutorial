@@ -94,6 +94,7 @@ Table posts {
   image_url varchar
   image2 varchar
   image3 varchar
+  visibility varchar [default: 'public', note: 'public/private']
   like_count integer [default: 0]
   created_at timestamp
   updated_at timestamp
@@ -147,6 +148,16 @@ Table collections {
   created_at timestamp
 }
 
+Table ai_chat_logs {
+  id integer [primary key]
+  user_id integer
+  message text
+  image varchar [null]
+  assistant_reply text
+  model_name varchar
+  created_at timestamp
+}
+
 Ref: profiles.user_id - users.id
 Ref: posts.user_id > users.id
 Ref: posts.category_id > categories.id
@@ -165,6 +176,43 @@ Ref: follows.follower_id > users.id
 Ref: follows.following_id > users.id
 Ref: collections.user_id > users.id
 Ref: collections.post_id > posts.id
+Ref: ai_chat_logs.user_id > users.id
+```
+
+## 用例圖（Use Case）
+
+```mermaid
+flowchart LR
+  Visitor[訪客]
+  Member[一般會員]
+  Admin[管理員]
+  AI[AI 美食助理]
+
+  UC1((註冊 / 登入))
+  UC2((瀏覽公開貼文))
+  UC3((搜尋與篩選貼文))
+  UC4((發表貼文))
+  UC5((設定貼文可見性<br/>所有人 / 只有自己))
+  UC6((按讚 / 留言 / 收藏))
+  UC7((使用 AI 美食助理))
+  UC8((記錄 AI 對話與模型))
+  UC9((管理分類 / 標籤 / 貼文 / 留言))
+
+  Visitor --> UC2
+  Visitor --> UC3
+  Visitor --> UC1
+
+  Member --> UC2
+  Member --> UC3
+  Member --> UC4
+  Member --> UC5
+  Member --> UC6
+  Member --> UC7
+
+  UC7 --> AI
+  AI --> UC8
+
+  Admin --> UC9
 ```
 
 ## 🚀 開發人員同步指南
