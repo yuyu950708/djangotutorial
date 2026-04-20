@@ -36,6 +36,11 @@
         {% if form.category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.category.errors.0 }}</p>{% endif %}
       </div>
       <div>
+        <label for="{{ form.visibility.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">誰可以看到</label>
+        {{ form.visibility }}
+        {% if form.visibility.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.visibility.errors.0 }}</p>{% endif %}
+      </div>
+      <div>
         <label for="{{ form.new_category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增分類</label>
         {{ form.new_category }}
         {% if form.new_category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.new_category.errors.0 }}</p>{% endif %}

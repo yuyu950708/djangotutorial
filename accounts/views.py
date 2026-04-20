@@ -7,7 +7,7 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ProfileEditForm, RegisterForm, UsernameOrEmailAuthenticationForm
@@ -90,6 +90,8 @@ def profile_posts(request, username):
         .annotate(comment_count=Count("post_comments", distinct=True))
         .order_by("-created_at", "-id")
     )
+    if request.user.id != base["profile_user"].id:
+        post_qs = post_qs.filter(visibility=Post.VISIBILITY_PUBLIC)
     paginator = Paginator(post_qs, PROFILE_POSTS_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page") or 1)
 

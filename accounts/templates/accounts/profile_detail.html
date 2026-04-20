@@ -66,6 +66,9 @@
               <a href="{% url 'accounts:profile_detail' post.author.username %}" class="truncate font-semibold text-slate-800 hover:underline">{{ post.author.username }}</a>
               <span class="text-sm text-slate-500">{{ post.created_at|timesince }} 前</span>
               {% if post.category %}<span class="text-sm text-slate-500">· {{ post.category.name }}</span>{% endif %}
+              {% if post.visibility == "private" %}
+                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">僅自己可見</span>
+              {% endif %}
             </div>
             {% if post.tags.all %}
               <div class="mt-1 flex flex-wrap gap-2">

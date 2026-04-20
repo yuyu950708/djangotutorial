@@ -169,7 +169,7 @@ class PostEditForm(PostForm):
 
     class Meta:
         model = Post
-        fields = ("title", "category", "tags", "content")
+        fields = ("title", "category", "visibility", "tags", "content")
         widgets = {
             "title": forms.TextInput(
                 attrs={
@@ -178,6 +178,11 @@ class PostEditForm(PostForm):
                 }
             ),
             "category": forms.Select(
+                attrs={
+                    "class": "min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm",
+                }
+            ),
+            "visibility": forms.Select(
                 attrs={
                     "class": "min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none ring-sky-200 focus:ring sm:text-sm",
                 }

@@ -23,6 +23,9 @@
             <span class="px-1">·</span>
             <span>{{ post.created_at|timesince }} 前</span>
             {% if post.category %}<span class="px-1">·</span><span>{{ post.category.name }}</span>{% endif %}
+            {% if post.visibility == "private" %}
+              <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">僅自己可見</span>
+            {% endif %}
           </div>
           {% if post.tags.all %}
             <div class="mt-2 flex flex-wrap gap-2">

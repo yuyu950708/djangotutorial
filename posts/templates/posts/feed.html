@@ -133,11 +133,16 @@
             {{ form.title }}
             {% if form.title.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.title.errors.0 }}</p>{% endif %}
           </div>
-          <div class="mb-3 grid gap-3 sm:grid-cols-2">
+          <div class="mb-3 grid gap-3 sm:grid-cols-3">
             <div>
               <label for="{{ form.category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">分類</label>
               {{ form.category }}
               {% if form.category.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.category.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+              <label for="{{ form.visibility.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">誰可以看到</label>
+              {{ form.visibility }}
+              {% if form.visibility.errors %}<p class="mt-1 text-sm text-rose-600">{{ form.visibility.errors.0 }}</p>{% endif %}
             </div>
             <div>
               <label for="{{ form.new_category.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-600">新增分類</label>
@@ -195,6 +200,9 @@
               <a href="{% url 'accounts:profile_detail' post.author.username %}" class="truncate font-semibold text-slate-800 hover:underline">{{ post.author.username }}</a>
               <span class="text-sm text-slate-500">{{ post.created_at|timesince }} 前</span>
               {% if post.category %}<span class="text-sm text-slate-500">· {{ post.category.name }}</span>{% endif %}
+              {% if post.visibility == "private" %}
+                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">僅自己可見</span>
+              {% endif %}
             </div>
             {% if post.tags.all %}
               <div class="mt-1 flex flex-wrap gap-2">

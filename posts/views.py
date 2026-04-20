@@ -98,6 +98,12 @@ def feed(request):
             collection_count=Count("collections", distinct=True),
         )
     )
+    if request.user.is_authenticated:
+        posts = posts.filter(
+            Q(visibility=Post.VISIBILITY_PUBLIC) | Q(author_id=request.user.id)
+        )
+    else:
+        posts = posts.filter(visibility=Post.VISIBILITY_PUBLIC)
     if search_query:
         posts = posts.filter(
             Q(content__icontains=search_query) | Q(author__username__icontains=search_query)
@@ -428,6 +434,9 @@ def post_detail(request, pk):
         .annotate(collection_count=Count("collections", distinct=True)),
         pk=pk,
     )
+    if post.visibility == Post.VISIBILITY_PRIVATE and post.author_id != getattr(request.user, "id", None):
+        messages.error(request, "此貼文僅作者可查看。")
+        return redirect("posts:feed")
     is_liked = False
     is_collected = False
     if request.user.is_authenticated:
@@ -564,6 +573,7 @@ def tag_delete(request, pk):
 def collections_list(request):
     collections = (
         Collection.objects.filter(user=request.user)
+        .filter(Q(post__visibility=Post.VISIBILITY_PUBLIC) | Q(post__author_id=request.user.id))
         .select_related("post", "post__author", "post__author__profile", "post__category")
         .prefetch_related("post__tags")
         .order_by("-created_at")

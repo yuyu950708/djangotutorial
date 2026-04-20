@@ -5,6 +5,13 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Post(models.Model):
+    VISIBILITY_PUBLIC = "public"
+    VISIBILITY_PRIVATE = "private"
+    VISIBILITY_CHOICES = (
+        (VISIBILITY_PUBLIC, _("所有人")),
+        (VISIBILITY_PRIVATE, _("只有自己")),
+    )
+
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -42,6 +49,12 @@ class Post(models.Model):
         null=True,
     )
     tags = models.ManyToManyField("posts.Tag", related_name="posts", blank=True, verbose_name=_("標籤"))
+    visibility = models.CharField(
+        _("可見性"),
+        max_length=20,
+        choices=VISIBILITY_CHOICES,
+        default=VISIBILITY_PUBLIC,
+    )
     like_count = models.PositiveIntegerField(_("讚數"), default=0)
     created_at = models.DateTimeField(_("建立時間"), auto_now_add=True)
     updated_at = models.DateTimeField(_("更新時間"), auto_now=True)
