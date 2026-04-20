@@ -295,8 +295,17 @@ document.addEventListener("alpine:init", () => {
       if (fileInput) fileInput.value = "";
 
       const token = this.getCookie("csrftoken");
+      const imageTurnId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : String(Date.now());
       const body = {
-        message: text || (fileCopy ? "（請看這張圖）" : ""),
+        // 只傳圖片時：避免每次送完全相同的文字，導致模型重複同一套回答
+        message:
+          text ||
+          (fileCopy
+            ? `請分析這張食物照片（請求編號：${imageTurnId}）。先列出你看得見的 3 個具體線索，再推測料理/份量，最後才估熱量並清楚寫出假設。`
+            : ""),
         history: this.historyForApi(),
       };
       if (imageBase64) {
