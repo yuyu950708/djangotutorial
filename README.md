@@ -1,59 +1,55 @@
 ﻿# 🍴 等等吃啥（EatWhat）
 
-這是一個「美食分享＋選擇困難救星」的小平台。大家可以發文、看文、用標籤/分類找靈感，還能按讚、留言、收藏。
+美食分享小站：發文、看文、用分類與標籤找靈感，還能按讚、留言、收藏與追蹤。
 
 ---
 
 ## 使用者故事（User Story）
 
-> 身為一個面對三餐要吃啥，每次都選擇困難的使用者，我希望可以用「分類/標籤」去找貼文，參考別人的美食分享，讓我更快決定要吃什麼。
+> 不知道要吃什麼時，我想用分類或標籤瀏覽貼文，參考別人的分享，更快決定要吃什麼。
 
 ---
 
 ## 核心願景
 
-- **現在要做的事**：幫大家解決「午餐/晚餐不知道吃什麼」。
-- **未來可以做的事**：如果之後發現大家常吃高熱量外食，可以再加上「熱量分析」或「健康標籤」等功能，讓吃飯更健康。
+- **現在**：幫大家少一點「今天吃什麼」的選擇困難。
+- **之後可擴充**：例如熱量、健康標籤等（視需求再規劃）。
 
 ---
 
-## 系統需求（System Requirements）
+## 系統需求
 
-### 功能性需求（Functional Requirements）
+### 功能性需求
 
-| **模組** | **用到的功能** | **狀態** |
+| 模組 | 說明 | 狀態 |
 | --- | --- | :---: |
-| 會員管理 | 註冊、登入／登出、個人檔案（頭像、bio、飲食偏好等） | 已完成 |
-| 社群貼文 | 發文（CKEditor 富文字、最多 3 張附圖）、**貼文可見性（公開／僅自己）**、瀏覽動態牆／單篇（訪客僅能看公開貼文）、貼文按讚、**巢狀留言與回覆** | 已完成 |
-| AI 美食助理 | 登入後使用（文字／附圖）、串接 NVIDIA（可備援模型／金鑰）、可選 Gemini；**對話寫入資料庫**（含模型名稱）供後台檢視 | 已完成 |
-| 搜尋篩選 | 關鍵字搜尋、**複選**分類／標籤篩選；登入者的搜尋會寫入 **Search logs** 供分析（含節流避免重複刷屏） | 已完成（介面與體驗可再優化） |
-| 互動追蹤 | 收藏貼文、追蹤會員、**留言按讚**；追蹤與按讚在資料層有唯一性與防自追蹤等限制 | 已完成 |
-| 後台管理 | 管理使用者／個檔、貼文／留言、分類／標籤，以及按讚、收藏、追蹤、搜尋紀錄、**AI 對話紀錄**、留言讚；貼文支援 **CSV 匯出**與 **重算 like_count** | 已完成 |
+| 會員 | 註冊、登入／登出、個人檔案（頭像、簡介、飲食偏好等） | 已完成 |
+| 貼文 | 發文（富文字、最多 3 張圖）、公開／僅自己可見；動態牆與單篇瀏覽（未登入只能看公開貼文）；按讚；巢狀留言與回覆 | 已完成 |
+| 搜尋篩選 | 關鍵字；分類與標籤可多選篩選；登入後會記錄搜尋關鍵字（方便之後做統計） | 已完成 |
+| 互動 | 收藏貼文、追蹤會員、留言按讚 | 已完成 |
+| 後台 | 管理會員與個檔、貼文與留言、分類與標籤，以及按讚／收藏／追蹤／搜尋紀錄等；貼文可匯出 CSV、重算讚數 | 已完成 |
 
-### 非功能性需求（Non-functional Requirements）
+### 非功能性需求
 
-- **資料庫**：MariaDB（關聯式資料庫）
-- **安全**：Django 密碼雜湊、CSRF 防護；API 金鑰與連線設定以 **環境變數（`.env`）** 管理，不進版控
-- **效能**：列表與關聯資料使用 `select_related()` / `prefetch_related()` 等減少查詢次數
-- **外部服務**：AI 請求設逾時與備援鏈，避免單一供應商失敗時整站無回應
-- **防呆**：搜尋字數上限、留言長度、搜尋紀錄寫入節流、表單驗證等基礎處理
+- **資料庫**：MariaDB。
+- **安全**：密碼雜湊、CSRF；敏感設定放在 `.env`，不要 commit 進 Git。
+- **效能**：列表盡量用 `select_related` / `prefetch_related` 減少查詢次數。
+- **防呆**：搜尋字數上限、留言長度、表單驗證、搜尋紀錄節流等基本處理。
 
 ---
 
-## 💻 技術棧（Tech Stack）
+## 技術棧
 
-- **Backend**：Django 5.x（Python）
-- **Database**：MariaDB 10.x
-- **Frontend**：HTML、Tailwind CSS、Django Template；**Alpine.js**（部分互動）、**Font Awesome**（圖示）
-- **內容與表單**：**django-ckeditor**（貼文富文字與圖片上傳）
-- **後台匯出**：**django-import-export**（貼文等）
-- **DevOps**：Git、HeidiSQL
+- **後端**：Django 5.x（Python）
+- **資料庫**：MariaDB 10.x
+- **畫面**：HTML、Tailwind、Django Template；Alpine.js（部分互動）、Font Awesome（圖示）
+- **貼文編輯**：django-ckeditor（富文字與圖片）
+- **後台匯出**：django-import-export
+- **工具**：Git、HeidiSQL
 
 ---
 
-## ERD / DBML（資料表設計）
-
-DBML：
+## 資料表（DBML 摘要）
 
 ```text
 Table users {
@@ -183,14 +179,16 @@ Ref: collections.post_id > posts.id
 Ref: ai_chat_logs.user_id > users.id
 ```
 
-## 用例圖（Use Case）
+---
 
-以下為 **PlantUML**（與實作一致：訪客可瀏覽「公開」貼文並篩選／搜尋；互動與 AI 需登入）。若 GitHub 預覽無法渲染，可用 [PlantUML Live](https://www.plantuml.com/plantuml/uml/) 或 VS Code PlantUML 外掛貼上繪製。
+## 用例圖（PlantUML）
+
+未登入可瀏覽公開貼文並搜尋／篩選；按讚、留言、發文等需登入。若 GitHub 無法預覽圖，可貼到 [PlantUML Live](https://www.plantuml.com/plantuml/uml/) 或 VS Code PlantUML 外掛。
 
 ```plantuml
 @startuml use_case
 
-title "<color #1A6><size 15>等等吃啥</size></color>\n<color #16A><size 18>Use Case Diagram 用例圖</size></color>\n<color grey>v1.2.0 @2026-04-20</color>\n"
+title "<color #1A6><size 15>等等吃啥</size></color>\n<color #16A><size 18>Use Case Diagram 用例圖</size></color>\n<color grey>v1.3 @2026-04-20</color>\n"
 
 left to right direction
 
@@ -220,8 +218,6 @@ package "社群系統功能" {
     usecase UC_Collect as "收藏貼文" #E1F5FE
     usecase UC_Follow as "追蹤其他會員" #E1F5FE
 
-    usecase UC_AI as "使用 AI 美食助理" #E1F5FE
-
     usecase UC_AdminUsers as "後台管理使用者 / 個人資料" #FFF3E0
     usecase UC_AdminContent as "後台管理貼文 / 留言" #FFF3E0
     usecase UC_AdminTaxonomy as "後台管理分類 / 標籤" #FFF3E0
@@ -247,30 +243,24 @@ Member --> UC_Comment
 Member --> UC_CommentLike
 Member --> UC_Collect
 Member --> UC_Follow
-Member --> UC_AI
 
 SysAdmin --> UC_AdminUsers
 SysAdmin --> UC_AdminContent
 SysAdmin --> UC_AdminTaxonomy
 SysAdmin --> UC_AdminRole
 
-' UML：選擇性擴充行為由「擴充用例」指向「基礎用例」（篩選／搜尋皆可視為在瀏覽貼文牆上的延伸）
 UC_Feed <|.. UC_Filter : <<extend>>
 UC_Feed <|.. UC_Search : <<extend>>
 
-' 發布與編輯流程內含「可見性」設定（表單欄位），勿用「發布 extend 編輯刪除」易誤解生命週期
 UC_CreatePost ..> UC_Visibility : <<include>>
 UC_EditDeletePost ..> UC_Visibility : <<include>>
-
-note bottom of UC_AI
-須登入。後端寫入 ai_chat_logs
-（提問、回覆、模型名稱等）
-end note
 
 @enduml
 ```
 
-## 🚀 開發人員同步指南
+---
+
+## 本機開發步驟
 
 ### 1. 安裝套件
 
@@ -278,14 +268,14 @@ end note
 pip install -r requirements.txt
 ```
 
-### 2. 建立 MariaDB 資料庫
+### 2. 建立資料庫
 
-- Database Name：`eat_what`
+- 名稱：`eat_what`
 - Collation：`utf8mb4_unicode_ci`
 
-### 3. 設定資料庫連線
+### 3. 連線設定
 
-到 `mysite/settings.py` 修改 `DATABASES`（改成自己的帳密與 port）。
+在 `mysite/settings.py` 的 `DATABASES` 填入自己的帳密與 port（或依專案慣例用環境變數）。
 
 ### 4. 建表
 
@@ -293,7 +283,7 @@ pip install -r requirements.txt
 python manage.py migrate
 ```
 
-### 5. 建superuser
+### 5. 建立管理員
 
 ```powershell
 python manage.py createsuperuser
@@ -304,4 +294,3 @@ python manage.py createsuperuser
 ```powershell
 python manage.py runserver
 ```
-
