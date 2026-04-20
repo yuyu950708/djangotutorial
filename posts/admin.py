@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from import_export import resources
 from import_export.admin import ExportMixin
 
-from .models import Category, Collection, CommentLike, Follow, Like, Post, PostComment, SearchLog, Tag
+from .models import AiChatLog, Category, Collection, CommentLike, Follow, Like, Post, PostComment, SearchLog, Tag
 
 
 class PostResource(resources.ModelResource):
@@ -143,3 +143,17 @@ class SearchLogAdmin(admin.ModelAdmin):
     autocomplete_fields = ("user",)
     ordering = ("-created_at",)
     list_select_related = ("user",)
+
+
+@admin.register(AiChatLog)
+class AiChatLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "model_name", "message", "has_image", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("message", "assistant_reply", "model_name", "user__username", "user__email")
+    autocomplete_fields = ("user",)
+    ordering = ("-created_at",)
+    list_select_related = ("user",)
+
+    @admin.display(description="有圖片")
+    def has_image(self, obj):
+        return bool(obj.image)

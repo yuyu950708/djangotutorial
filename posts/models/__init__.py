@@ -7,4 +7,5 @@ from .post_comment import PostComment
 from .comment_like import CommentLike
 from .follow import Follow
 from .collection import Collection
+from .ai_chat_log import AiChatLog
 from . import signals  # noqa: F401

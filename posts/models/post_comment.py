@@ -38,6 +38,8 @@ class PostComment(models.Model):
     class Meta:
         db_table = "post_comment"
         ordering = ["created_at"]
+        verbose_name = _("貼文留言")
+        verbose_name_plural = _("貼文留言")
         indexes = [
             models.Index(fields=["post", "created_at"], name="post_comment_post_created"),
             models.Index(fields=["root", "created_at"], name="post_comment_root_created"),

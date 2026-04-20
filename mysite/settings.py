@@ -159,11 +159,16 @@ LOGIN_REDIRECT_URL = 'posts:feed'
 
 # Google Gemini（美食助理）：金鑰來源 https://aistudio.google.com/app/apikey
 GEMINI_API_KEY = (
-    os.environ.get("NVIDIA_API_KEY", "").strip()
-    or os.environ.get("api_key", "").strip()
+    os.environ.get("GEMINI_API_KEY", "").strip()
+    # Back-compat：第三組 key 改名時也可沿用（例如 NVIDIA_BACKUP_API_KEY2）
+    or os.environ.get("NVIDIA_BACKUP_API_KEY2", "").strip()
 )
 # 例如 gemini-2.0-flash、gemini-1.5-flash（需帳戶可用模型）
-GEMINI_MODEL = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3-nano-30b-a3b")
+GEMINI_MODEL = (
+    os.environ.get("GEMINI_MODEL", "").strip()
+    or os.environ.get("NVIDIA_BACKUP_MODEL2", "").strip()
+    or "gemini-2.0-flash"
+)
 
 # NVIDIA Integrate（OpenAI 風格 Chat Completions）
 NVIDIA_API_KEY = (
@@ -175,6 +180,9 @@ NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "qwen/qwen3.5-397b-a17b").strip()
 NVIDIA_INVOKE_URL = os.environ.get(
     "NVIDIA_INVOKE_URL", "https://integrate.api.nvidia.com/v1/chat/completions"
 ).strip()
+NVIDIA_BACKUP_API_KEY = os.environ.get("NVIDIA_BACKUP_API_KEY", "").strip()
+NVIDIA_BACKUP_MODEL = os.environ.get("NVIDIA_BACKUP_MODEL", NVIDIA_MODEL).strip()
+AI_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("AI_REQUEST_TIMEOUT_SECONDS", "35").strip() or "35")
 
 # CKEditor（富文字 + 圖片上傳）
 CKEDITOR_UPLOAD_PATH = "ckeditor_uploads/"

@@ -124,6 +124,13 @@ DEFAULT_NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completion
 DEFAULT_NVIDIA_MODEL = "meta/llama-3.2-11b-vision-instruct"
 
 
+class AIProviderError(Exception):
+    def __init__(self, message: str, *, transient: bool = False):
+        super().__init__(message)
+        self.message = message
+        self.transient = transient
+
+
 def _nvidia_key_from_env() -> str:
     return (os.environ.get("NVIDIA_API_KEY") or os.environ.get("api_key") or "").strip()
 
@@ -217,7 +224,10 @@ def call_nvidia_chat_completions(
 ) -> str:
     key = (api_key or "").strip()
     if not key:
-        return "缺少 NVIDIA API Key：請在 `.env` 設定 `NVIDIA_API_KEY`（或 `api_key`）。"
+        raise AIProviderError(
+            "缺少 NVIDIA API Key：請在 `.env` 設定 `NVIDIA_API_KEY`（或 `api_key`）。",
+            transient=False,
+        )
 
     payload: dict[str, Any] = {
         "model": model,
@@ -241,18 +251,21 @@ def call_nvidia_chat_completions(
     )
 
     def _do() -> dict[str, Any]:
-        with urllib.request.urlopen(req, timeout=90) as resp:
+        with urllib.request.urlopen(req, timeout=max(10, int(getattr(settings, "AI_REQUEST_TIMEOUT_SECONDS", 60)))) as resp:
             return json.loads(resp.read().decode("utf-8"))
 
     try:
         data = _do()
         choices = data.get("choices") or []
         if not choices:
-            return "NVIDIA API 沒有回傳 choices，請稍後再試。"
+            raise AIProviderError("NVIDIA API 沒有回傳 choices，請稍後再試。", transient=True)
         msg = (choices[0].get("message") or {}).get("content") or ""
-        return (msg or "").strip() or "NVIDIA API 回覆為空，請稍後再試。"
+        msg = (msg or "").strip()
+        if not msg:
+            raise AIProviderError("NVIDIA API 回覆為空，請稍後再試。", transient=True)
+        return msg
     except TimeoutError:
-        return "NVIDIA API 讀取回覆逾時（timeout），請稍後再試。"
+        raise AIProviderError("NVIDIA API 讀取回覆逾時（timeout），請稍後再試。", transient=True)
     except urllib.error.HTTPError as exc:
         try:
             raw = exc.read().decode("utf-8")
@@ -272,22 +285,24 @@ def call_nvidia_chat_completions(
                         return msg
             except Exception:
                 pass
-            return (
+            raise AIProviderError(
                 f"NVIDIA API 上游暫時性錯誤（HTTP {exc.code}）。\n"
                 "請稍後重試；如果你是傳圖片，建議換更小/更清晰的圖片（避免超高解析），"
                 "或改用 Gemini（較穩定）。"
+                ,
+                transient=True,
             )
 
         if exc.code in (401, 403):
-            return "NVIDIA API 權限不足：請確認 `NVIDIA_API_KEY` 正確且仍有效。"
+            raise AIProviderError("NVIDIA API 權限不足：請確認 `NVIDIA_API_KEY` 正確且仍有效。", transient=False)
         if exc.code == 429:
-            return "NVIDIA API 請求太頻繁（429）：請稍後再試。"
+            raise AIProviderError("NVIDIA API 請求太頻繁（429）：請稍後再試。", transient=True)
 
         if raw:
-            return f"NVIDIA API 錯誤（HTTP {exc.code}）：{raw[:500]}"
-        return f"NVIDIA API 錯誤（HTTP {exc.code}）：{exc}"
+            raise AIProviderError(f"NVIDIA API 錯誤（HTTP {exc.code}）：{raw[:500]}", transient=True)
+        raise AIProviderError(f"NVIDIA API 錯誤（HTTP {exc.code}）：{exc}", transient=True)
     except (urllib.error.URLError, json.JSONDecodeError, KeyError, IndexError) as exc:
-        return f"NVIDIA API 連線/解析失敗：{exc}"
+        raise AIProviderError(f"NVIDIA API 連線/解析失敗：{exc}", transient=True)
 
 
 # =========================
@@ -338,7 +353,7 @@ def _build_gemini_contents(
 def call_gemini_generate(contents: list[dict[str, Any]], *, model: str, api_key: str) -> str:
     key = (api_key or "").strip()
     if not key:
-        return "缺少 Gemini API Key：請在 `.env` 設定 `GEMINI_API_KEY`。"
+        raise AIProviderError("缺少 Gemini API Key：請在 `.env` 設定 `GEMINI_API_KEY`。", transient=False)
 
     body: dict[str, Any] = {
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
@@ -353,33 +368,35 @@ def call_gemini_generate(contents: list[dict[str, Any]], *, model: str, api_key:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
+        with urllib.request.urlopen(req, timeout=max(10, int(getattr(settings, "AI_REQUEST_TIMEOUT_SECONDS", 60)))) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         candidates = data.get("candidates") or []
         if not candidates:
-            return "Gemini 沒有回傳候選回覆，請稍後再試。"
+            raise AIProviderError("Gemini 沒有回傳候選回覆，請稍後再試。", transient=True)
         cand = candidates[0]
         content = cand.get("content") or {}
         parts = content.get("parts") or []
         texts = [p.get("text", "") for p in parts if isinstance(p, dict)]
         out = "\n".join(t for t in texts if t).strip()
-        return out or "Gemini 回覆為空，請稍後再試。"
+        if not out:
+            raise AIProviderError("Gemini 回覆為空，請稍後再試。", transient=True)
+        return out
     except TimeoutError:
-        return "Gemini API 讀取回覆逾時（timeout），請稍後再試。"
+        raise AIProviderError("Gemini API 讀取回覆逾時（timeout），請稍後再試。", transient=True)
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
-            return "Gemini API 權限不足：請確認 `GEMINI_API_KEY` 正確且已開啟 API。"
+            raise AIProviderError("Gemini API 權限不足：請確認 `GEMINI_API_KEY` 正確且已開啟 API。", transient=False)
         if exc.code == 429:
-            return "Gemini API 請求太頻繁（429）：請稍後再試。"
+            raise AIProviderError("Gemini API 請求太頻繁（429）：請稍後再試。", transient=True)
         try:
             raw = exc.read().decode("utf-8")
         except Exception:
             raw = ""
         if raw:
-            return f"Gemini API 錯誤（HTTP {exc.code}）：{raw[:500]}"
-        return f"Gemini API 錯誤（HTTP {exc.code}）：{exc}"
+            raise AIProviderError(f"Gemini API 錯誤（HTTP {exc.code}）：{raw[:500]}", transient=True)
+        raise AIProviderError(f"Gemini API 錯誤（HTTP {exc.code}）：{exc}", transient=True)
     except (urllib.error.URLError, json.JSONDecodeError, KeyError, IndexError) as exc:
-        return f"Gemini API 連線/解析失敗：{exc}"
+        raise AIProviderError(f"Gemini API 連線/解析失敗：{exc}", transient=True)
 
 
 # =========================
@@ -392,7 +409,7 @@ def get_assistant_reply(
     message: str,
     image: tuple[str, bytes] | None,
     history: list[Any],
-) -> str:
+) -> tuple[str, str]:
     """
     image: 已由 view 解出之 (mime_type, raw_bytes)；無圖則為 None。
     """
@@ -400,19 +417,46 @@ def get_assistant_reply(
 
     nvidia_key = (getattr(settings, "NVIDIA_API_KEY", "") or "").strip() or _nvidia_key_from_env()
     nvidia_model = getattr(settings, "NVIDIA_MODEL", DEFAULT_NVIDIA_MODEL)
+    nvidia_backup_key = (getattr(settings, "NVIDIA_BACKUP_API_KEY", "") or "").strip()
+    nvidia_backup_model = getattr(settings, "NVIDIA_BACKUP_MODEL", nvidia_model)
     nvidia_url = getattr(settings, "NVIDIA_INVOKE_URL", DEFAULT_NVIDIA_INVOKE_URL)
 
     gemini_key = (getattr(settings, "GEMINI_API_KEY", "") or "").strip()
     gemini_model = getattr(settings, "GEMINI_MODEL", "gemini-2.0-flash")
 
-    # Prefer NVIDIA（OpenAI 相容 vision：image_url + data URL）
+    # Prefer NVIDIA primary -> NVIDIA backup -> Gemini.
+    msgs = _build_nvidia_messages(hist, message, image)
+    nvidia_errors: list[str] = []
     if nvidia_key:
-        msgs = _build_nvidia_messages(hist, message, image)
-        return call_nvidia_chat_completions(messages=msgs, api_key=nvidia_key, model=nvidia_model, invoke_url=nvidia_url)
+        try:
+            reply = call_nvidia_chat_completions(
+                messages=msgs, api_key=nvidia_key, model=nvidia_model, invoke_url=nvidia_url
+            )
+            return reply, nvidia_model
+        except AIProviderError as exc:
+            nvidia_errors.append(f"主模型失敗：{exc.message}")
+
+    if nvidia_backup_key and nvidia_backup_key != nvidia_key:
+        try:
+            reply = call_nvidia_chat_completions(
+                messages=msgs, api_key=nvidia_backup_key, model=nvidia_backup_model, invoke_url=nvidia_url
+            )
+            return reply, nvidia_backup_model
+        except AIProviderError as exc:
+            nvidia_errors.append(f"備援模型失敗：{exc.message}")
 
     if gemini_key:
         contents = _build_gemini_contents(hist, message, image)
-        return call_gemini_generate(contents, model=gemini_model, api_key=gemini_key)
+        try:
+            reply = call_gemini_generate(contents, model=gemini_model, api_key=gemini_key)
+            return reply, gemini_model
+        except AIProviderError as exc:
+            if nvidia_errors:
+                return f"{'; '.join(nvidia_errors)}；Gemini 也失敗：{exc.message}", "fallback-error"
+            return exc.message, "gemini-error"
 
-    return _demo_reply(message, bool(image))
+    if nvidia_errors:
+        return "；".join(nvidia_errors), "nvidia-error"
+
+    return _demo_reply(message, bool(image)), "demo"
 

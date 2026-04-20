@@ -1,10 +1,12 @@
 import json
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.core.files.base import ContentFile
 from django.db.models import Count, Exists, OuterRef, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,7 +19,7 @@ from urllib.parse import urlencode
 
 from .ai_chat import decode_client_image_base64, get_assistant_reply
 from .forms import CategoryForm, PostEditForm, PostForm, TagForm
-from .models import Category, Collection, CommentLike, Like, Post, PostComment, SearchLog, Tag
+from .models import AiChatLog, Category, Collection, CommentLike, Like, Post, PostComment, SearchLog, Tag
 
 
 def _wants_json(request):
@@ -631,5 +633,20 @@ def ai_chat(request):
     if not message and not image_tuple:
         return JsonResponse({"error": "請輸入文字或上傳圖片。"}, status=400)
 
-    reply = get_assistant_reply(message=message, image=image_tuple, history=history)
+    reply, model_name = get_assistant_reply(message=message, image=image_tuple, history=history)
+
+    log = AiChatLog(user=request.user, message=message, assistant_reply=reply, model_name=model_name)
+    if image_tuple:
+        mime, raw = image_tuple
+        ext = "jpg"
+        if mime == "image/png":
+            ext = "png"
+        elif mime == "image/gif":
+            ext = "gif"
+        elif mime == "image/webp":
+            ext = "webp"
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        log.image.save(filename, ContentFile(raw), save=False)
+    log.save()
+
     return JsonResponse({"reply": reply})
