@@ -66,7 +66,15 @@ def _profile_header_context(request, username):
     is_following = False
     if request.user.is_authenticated:
         is_following = Follow.objects.filter(follower=request.user, following=user).exists()
-    return {"profile_user": user, "profile": profile, "is_following": is_following}
+    follower_count = Follow.objects.filter(following=user).count()
+    following_count = Follow.objects.filter(follower=user).count()
+    return {
+        "profile_user": user,
+        "profile": profile,
+        "is_following": is_following,
+        "follower_count": follower_count,
+        "following_count": following_count,
+    }
 
 
 def profile_detail(request, username):
@@ -117,6 +125,8 @@ def profile_comments(request, username):
 
 @login_required(login_url="accounts:login")
 def follow_toggle(request, username):
+    if request.method != "POST":
+        return redirect("accounts:profile_detail", username=username)
     target = get_object_or_404(User, username=username)
     if target == request.user:
         messages.error(request, "不能追蹤自己。")
@@ -129,4 +139,7 @@ def follow_toggle(request, username):
     else:
         Follow.objects.get_or_create(follower=request.user, following=target)
         messages.success(request, "已追蹤。")
+    next_url = request.POST.get("next", "").strip()
+    if next_url:
+        return redirect(next_url)
     return redirect("accounts:profile_detail", username=target.username)

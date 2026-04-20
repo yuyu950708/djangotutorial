@@ -1,13 +1,11 @@
 import csv
 from django.contrib import admin
-# 可顯示中文
-from django.contrib import admin
 from django.db.models import Count
 from django.http import HttpResponse
 from import_export import resources
 from import_export.admin import ExportMixin
 
-from .models import Category, Collection, Comment, CommentLike, Follow, Like, Post, PostComment, SearchLog, Tag
+from .models import Category, Collection, CommentLike, Follow, Like, Post, PostComment, SearchLog, Tag
 
 
 class PostResource(resources.ModelResource):

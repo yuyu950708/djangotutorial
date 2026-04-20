@@ -15,11 +15,24 @@
             <h1 class="break-words text-xl font-semibold sm:text-xl">{{ profile_user.username }}</h1>
             {% if profile.bio %}<p class="mt-1 break-words text-sm text-slate-500">{{ profile.bio }}</p>{% endif %}
             {% if profile.dietary_preference %}<p class="mt-2 text-sm text-sky-600">體質紀錄：{{ profile.dietary_preference }}</p>{% endif %}
+            <p class="mt-2 text-sm text-slate-500">追蹤中 {{ following_count }} · 粉絲 {{ follower_count }}</p>
           </div>
         </div>
-        {% if user == profile_user %}
-        <a href="{% url 'accounts:profile_edit' %}" class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">編輯檔案</a>
-        {% endif %}
+        <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+          {% if user == profile_user %}
+          <a href="{% url 'accounts:profile_edit' %}" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">編輯檔案</a>
+          {% elif user.is_authenticated %}
+          <form method="post" action="{% url 'accounts:follow_toggle' profile_user.username %}" class="w-full sm:w-auto">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if is_following %}
+              <button type="submit" class="min-h-11 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">取消追蹤</button>
+            {% else %}
+              <button type="submit" class="min-h-11 w-full rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 sm:w-auto">追蹤</button>
+            {% endif %}
+          </form>
+          {% endif %}
+        </div>
     </div>
     <div class="mb-3 flex flex-wrap gap-2">
       <a
