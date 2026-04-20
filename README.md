@@ -23,11 +23,11 @@
 
 | 模組 | 用到的功能 | 狀態 |
 | :--- | :--- | :---: |
-| 會員管理 | 註冊、登入/登出、個人資料與頭像 | ✅ 已完成 |
-| 社群貼文 | 發文（含圖片）、看貼文、按讚、留言 | ✅ 已完成 |
-| 搜尋篩選 | 關鍵字搜尋、分類/標籤篩選 | ✅ 已完成（可再優化） |
-| 互動追蹤 | 收藏貼文、追蹤會員 | ✅ 已完成 |
-| 後台管理 | 管理員可管理使用者/貼文/留言/分類/標籤 | ✅ 已完成 |
+| 會員管理 | 註冊、登入/登出、個人資料與頭像 |
+| 社群貼文 | 發文（最多 3 張附圖）、看貼文、按讚、巢狀留言 | 
+| 搜尋篩選 | 關鍵字搜尋、分類/標籤篩選 | 
+| 互動追蹤 | 收藏貼文、追蹤會員、留言按讚 |
+| 後台管理 | 管理員可管理使用者/貼文/留言/分類/標籤 |
 
 ### 非功能性需求（Non-functional Requirements）
 
@@ -92,9 +92,17 @@ Table posts {
   title varchar
   content text
   image_url varchar
+  image2 varchar
+  image3 varchar
   like_count integer [default: 0]
   created_at timestamp
   updated_at timestamp
+}
+
+Table posts_tags {
+  id integer [primary key]
+  post_id integer
+  tag_id integer
 }
 
 Table likes {
@@ -104,11 +112,24 @@ Table likes {
   created_at timestamp
 }
 
-Table comments {
+Table post_comment {
   id integer [primary key]
   post_id integer
   user_id integer
+  parent_id integer [null]
+  root_id integer [null]
   content text
+  like_count integer [default: 0]
+  created_at timestamp
+  updated_at timestamp
+  is_locked boolean [default: false]
+  is_pinned boolean [default: false]
+}
+
+Table post_comment_likes {
+  id integer [primary key]
+  user_id integer
+  comment_id integer
   created_at timestamp
 }
 
@@ -129,9 +150,15 @@ Table collections {
 Ref: profiles.user_id - users.id
 Ref: posts.user_id > users.id
 Ref: posts.category_id > categories.id
+Ref: posts_tags.post_id > posts.id
+Ref: posts_tags.tag_id > tags.id
 Ref: search_logs.user_id > users.id
-Ref: comments.post_id > posts.id
-Ref: comments.user_id > users.id
+Ref: post_comment.post_id > posts.id
+Ref: post_comment.user_id > users.id
+Ref: post_comment.parent_id > post_comment.id
+Ref: post_comment.root_id > post_comment.id
+Ref: post_comment_likes.user_id > users.id
+Ref: post_comment_likes.comment_id > post_comment.id
 Ref: likes.post_id > posts.id
 Ref: likes.user_id > users.id
 Ref: follows.follower_id > users.id
