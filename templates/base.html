@@ -21,7 +21,7 @@
       font-size: 1rem;
       line-height: 1.5;
     }
-    .food-ai-loading-root #container,
+    .food-ai-loading-root .food-ai-loading-scalebox,
     .food-ai-loading-root .divider,
     .food-ai-loading-root .loading-text,
     .food-ai-loading-root .loading-text::before,
@@ -29,7 +29,7 @@
     .food-ai-loading-root .loading-text .letter::before {
       box-sizing: border-box;
     }
-    .food-ai-loading-root #container {
+    .food-ai-loading-root .food-ai-loading-scalebox {
       position: relative;
       width: 240px;
       height: 120px;
@@ -723,6 +723,7 @@
       initPostImageGalleries();
     });
   </script>
+  {% include "partials/page_submit_loading_overlay.html" %}
   {% block extra_js %}{% endblock %}
 </body>
 </html>

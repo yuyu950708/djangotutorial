@@ -181,38 +181,89 @@ Ref: ai_chat_logs.user_id > users.id
 
 ## 用例圖（Use Case）
 
-```mermaid
-flowchart LR
-  Visitor[訪客]
-  Member[一般會員]
-  Admin[管理員]
-  AI[AI 美食助理]
+以下為 **PlantUML**（與實作一致：訪客可瀏覽「公開」貼文並篩選／搜尋；互動與 AI 需登入）。若 GitHub 預覽無法渲染，可用 [PlantUML Live](https://www.plantuml.com/plantuml/uml/) 或 VS Code PlantUML 外掛貼上繪製。
 
-  UC1((註冊 / 登入))
-  UC2((瀏覽公開貼文))
-  UC3((搜尋與篩選貼文))
-  UC4((發表貼文))
-  UC5((設定貼文可見性<br/>所有人 / 只有自己))
-  UC6((按讚 / 留言 / 收藏))
-  UC7((使用 AI 美食助理))
-  UC8((記錄 AI 對話與模型))
-  UC9((管理分類 / 標籤 / 貼文 / 留言))
+```plantuml
+@startuml use_case
 
-  Visitor --> UC2
-  Visitor --> UC3
-  Visitor --> UC1
+title "<color #1A6><size 15>等等吃啥</size></color>\n<color #16A><size 18>Use Case Diagram 用例圖</size></color>\n<color grey>v1.2.0 @2026-04-20</color>\n"
 
-  Member --> UC2
-  Member --> UC3
-  Member --> UC4
-  Member --> UC5
-  Member --> UC6
-  Member --> UC7
+left to right direction
 
-  UC7 --> AI
-  AI --> UC8
+actor "系統管理員" as SysAdmin
+actor "非會員" as Guest
+actor "一般會員" as Member
 
-  Admin --> UC9
+package "社群系統功能" {
+    usecase UC_Register as "註冊會員" #FCE4EC
+    usecase UC_Login as "登入" #FCE4EC
+
+    usecase UC_Logout as "登出" #E1F5FE
+    usecase UC_ProfileEdit as "個人資料管理" #E1F5FE
+    usecase UC_ProfileView as "查看會員個人頁" #E1F5FE
+    usecase UC_Feed as "瀏覽貼文牆\n（訪客僅公開貼文）" #E1F5FE
+
+    usecase UC_Filter as "依分類 / 標籤篩選貼文" #E1F5FE
+    usecase UC_Search as "關鍵字搜尋貼文" #E1F5FE
+
+    usecase UC_CreatePost as "發布貼文" #E1F5FE
+    usecase UC_EditDeletePost as "編輯 / 刪除自己的貼文" #E1F5FE
+    usecase UC_Visibility as "設定貼文可見性\n（公開 / 僅自己）" #E1F5FE
+
+    usecase UC_Comment as "發表 / 回覆留言" #E1F5FE
+    usecase UC_CommentLike as "留言按讚 / 取消" #E1F5FE
+    usecase UC_Like as "貼文按讚 / 取消" #E1F5FE
+    usecase UC_Collect as "收藏貼文" #E1F5FE
+    usecase UC_Follow as "追蹤其他會員" #E1F5FE
+
+    usecase UC_AI as "使用 AI 美食助理" #E1F5FE
+
+    usecase UC_AdminUsers as "後台管理使用者 / 個人資料" #FFF3E0
+    usecase UC_AdminContent as "後台管理貼文 / 留言" #FFF3E0
+    usecase UC_AdminTaxonomy as "後台管理分類 / 標籤" #FFF3E0
+    usecase UC_AdminRole as "使用者角色 / 權限管理" #FFF3E0
+}
+
+Guest --> UC_Register
+Guest --> UC_Login
+Guest --> UC_Feed
+Guest --> UC_Filter
+Guest --> UC_Search
+
+Member --> UC_Logout
+Member --> UC_ProfileEdit
+Member --> UC_ProfileView
+Member --> UC_Feed
+Member --> UC_Filter
+Member --> UC_Search
+Member --> UC_CreatePost
+Member --> UC_EditDeletePost
+Member --> UC_Like
+Member --> UC_Comment
+Member --> UC_CommentLike
+Member --> UC_Collect
+Member --> UC_Follow
+Member --> UC_AI
+
+SysAdmin --> UC_AdminUsers
+SysAdmin --> UC_AdminContent
+SysAdmin --> UC_AdminTaxonomy
+SysAdmin --> UC_AdminRole
+
+' UML：選擇性擴充行為由「擴充用例」指向「基礎用例」（篩選／搜尋皆可視為在瀏覽貼文牆上的延伸）
+UC_Feed <|.. UC_Filter : <<extend>>
+UC_Feed <|.. UC_Search : <<extend>>
+
+' 發布與編輯流程內含「可見性」設定（表單欄位），勿用「發布 extend 編輯刪除」易誤解生命週期
+UC_CreatePost ..> UC_Visibility : <<include>>
+UC_EditDeletePost ..> UC_Visibility : <<include>>
+
+note bottom of UC_AI
+須登入。後端寫入 ai_chat_logs
+（提問、回覆、模型名稱等）
+end note
+
+@enduml
 ```
 
 ## 🚀 開發人員同步指南
