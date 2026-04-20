@@ -178,7 +178,7 @@
 
   <div class="space-y-3 sm:space-y-4">
     {% for post in posts %}
-      <article class="rounded-xl bg-white p-4 shadow sm:p-5" data-post-article>
+      <article class="rounded-xl bg-white p-4 shadow sm:p-5" data-post-article data-post-id="{{ post.id }}">
         <div class="mb-2 flex items-start gap-3">
           <a href="{% url 'accounts:profile_detail' post.author.username %}" class="shrink-0">
             {% if post.author.profile.avatar %}
@@ -319,12 +319,34 @@
         {% if user.is_authenticated %}
           <hr class="my-4 border-slate-200">
 
-          <div class="space-y-2" data-post-comments-list>
-            {% for node in post.comment_roots %}
-              {% include "posts/_comment_node.html" with node=node %}
-            {% empty %}
-              <p class="text-sm text-slate-400" data-comments-empty-placeholder>尚無留言</p>
-            {% endfor %}
+          <div x-data="{ showComments: {% if post.comment_count|default:0 > 3 %}false{% else %}true{% endif %} }">
+            {% if post.comment_count|default:0 > 3 %}
+              <button
+                type="button"
+                class="mb-2 text-sm font-medium text-sky-600 hover:underline"
+                @click="showComments = !showComments"
+                x-text="showComments ? '收起留言' : '查看全部 {{ post.comment_count|default:0 }} 則留言'"
+              ></button>
+            {% endif %}
+
+            <div
+              class="space-y-2"
+              data-post-comments-list
+              x-show="showComments"
+              x-cloak
+              x-transition:enter="transition ease-out duration-200"
+              x-transition:enter-start="opacity-0 -translate-y-0.5"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-0.5"
+            >
+              {% for node in post.comment_roots %}
+                {% include "posts/_comment_node.html" with node=node %}
+              {% empty %}
+                <p class="text-sm text-slate-400" data-comments-empty-placeholder>尚無留言</p>
+              {% endfor %}
+            </div>
           </div>
 
           <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="js-comment-create-form mt-3">
@@ -358,11 +380,77 @@
     </nav>
   {% endif %}
 </div>
+
+<button
+  id="feed-new-posts-btn"
+  type="button"
+  class="fixed bottom-5 left-1/2 z-40 hidden -translate-x-1/2 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg ring-2 ring-white/80 transition hover:bg-sky-500 sm:bottom-7"
+>
+  回到最上方
+</button>
 {% endblock %}
 
 {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    const newPostsBtn = document.getElementById("feed-new-posts-btn");
+    const firstArticle = document.querySelector("[data-post-article][data-post-id]");
+    const firstPostId = firstArticle ? Number(firstArticle.getAttribute("data-post-id") || 0) : 0;
+    const currentUrl = new URL(window.location.href);
+    const currentPage = currentUrl.searchParams.get("page");
+    const onFirstPage = !currentPage || currentPage === "1";
+    let hasNewPosts = false;
+
+    function syncNewPostsBtn() {
+      if (!newPostsBtn) return;
+      const show = window.scrollY > 180;
+      newPostsBtn.classList.toggle("hidden", !show);
+      newPostsBtn.classList.toggle("animate-bounce", hasNewPosts);
+      newPostsBtn.textContent = hasNewPosts ? "有新貼文，回到上方查看" : "回到最上方";
+    }
+
+    async function checkNewPosts() {
+      if (!onFirstPage || !firstPostId) return;
+      try {
+        const checkUrl = new URL(window.location.href);
+        checkUrl.searchParams.set("page", "1");
+        checkUrl.searchParams.set("_poll", String(Date.now()));
+        const response = await fetch(checkUrl.toString(), {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const incomingFirst = doc.querySelector("[data-post-article][data-post-id]");
+        if (!incomingFirst) return;
+        const incomingId = Number(incomingFirst.getAttribute("data-post-id") || 0);
+        if (incomingId > firstPostId) {
+          hasNewPosts = true;
+          syncNewPostsBtn();
+        }
+      } catch (_e) {
+        // ignore polling errors
+      }
+    }
+
+    if (newPostsBtn) {
+      newPostsBtn.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (hasNewPosts) {
+          window.setTimeout(() => {
+            window.location.reload();
+          }, 450);
+        }
+      });
+      window.addEventListener("scroll", syncNewPostsBtn, { passive: true });
+      syncNewPostsBtn();
+    }
+
+    if (onFirstPage && firstPostId) {
+      window.setInterval(checkNewPosts, 30000);
+    }
+
     const categorySelect = document.getElementById("feed-category");
     const selectedCategoriesBox = document.getElementById("feed-selected-categories-box");
     const selectedCategoriesList = document.getElementById("feed-selected-categories-list");
