@@ -476,8 +476,57 @@
       });
     }
 
+    function initPostImageGalleries() {
+      document.querySelectorAll("article[data-post-article]").forEach((article) => {
+        if (article.dataset.galleryReady === "1") return;
+        const postBody = article.querySelector(".post-body");
+        if (!postBody) return;
+
+        const bodyImages = Array.from(postBody.querySelectorAll("img"));
+        const coverImages = Array.from(article.querySelectorAll(".post-cover-image"));
+        const allImages = [...bodyImages, ...coverImages].filter(
+          (img, idx, arr) => img && !img.closest(".image-gallery") && arr.indexOf(img) === idx
+        );
+        if (!allImages.length) return;
+
+        const gallery = document.createElement("div");
+        gallery.className = "image-gallery mt-3 flex w-full gap-3 overflow-x-auto snap-x pb-2";
+
+        allImages.forEach((img) => {
+          const oldParent = img.parentElement;
+          img.className = "max-h-[300px] w-auto shrink-0 snap-center rounded-lg object-contain bg-slate-50";
+          gallery.appendChild(img);
+          if (
+            oldParent &&
+            oldParent.tagName === "P" &&
+            oldParent.querySelectorAll("img").length === 0 &&
+            !oldParent.textContent.trim()
+          ) {
+            oldParent.remove();
+          }
+        });
+
+        article.querySelectorAll(".post-cover-image").forEach((img) => {
+          const wrap = img.parentElement;
+          if (
+            wrap &&
+            wrap !== gallery &&
+            (wrap.tagName === "DIV" || wrap.tagName === "P") &&
+            wrap.querySelectorAll("img").length === 0 &&
+            !wrap.textContent.trim()
+          ) {
+            wrap.remove();
+          }
+        });
+
+        postBody.insertAdjacentElement("afterend", gallery);
+        article.dataset.galleryReady = "1";
+      });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       initCommentCreateForms();
+      initPostImageGalleries();
     });
   </script>
   {% block extra_js %}{% endblock %}
