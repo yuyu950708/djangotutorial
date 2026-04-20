@@ -390,6 +390,41 @@
     }
 
     function initCommentCreateForms() {
+      function getDirectReplyToggle(commentEl) {
+        if (!commentEl) return null;
+        for (const child of Array.from(commentEl.children || [])) {
+          if (child && child.dataset && child.dataset.replyToggle !== undefined) {
+            return child;
+          }
+        }
+        return null;
+      }
+
+      function getAlpineState(el) {
+        if (!el) return null;
+        if (el.__x && el.__x.$data) return el.__x.$data;
+        if (Array.isArray(el._x_dataStack) && el._x_dataStack.length) {
+          return el._x_dataStack[0] || null;
+        }
+        return null;
+      }
+
+      function openAndBumpReplyCounts(commentEl) {
+        let cursor = commentEl;
+        while (cursor) {
+          const toggle = getDirectReplyToggle(cursor);
+          const state = getAlpineState(toggle);
+          if (state) {
+            state.replyCount = Number(state.replyCount || 0) + 1;
+            state.showReplies = true;
+          }
+          const parentChildrenBox = cursor.closest("[data-comment-children]");
+          if (!parentChildrenBox) break;
+          const parentId = parentChildrenBox.getAttribute("data-comment-children");
+          cursor = parentId ? document.querySelector(`[data-comment-id="${parentId}"]`) : null;
+        }
+      }
+
       document.querySelectorAll(".js-comment-create-form").forEach((form) => {
         if (form.dataset.ajaxBound === "1") return;
         form.dataset.ajaxBound = "1";
@@ -443,6 +478,7 @@
                 if (childrenBox) {
                   childrenBox.classList.remove("hidden");
                   childrenBox.appendChild(fragment);
+                  openAndBumpReplyCounts(parentEl);
                   if (window.Alpine && typeof window.Alpine.initTree === "function") {
                     window.Alpine.initTree(fragment);
                   }
@@ -465,8 +501,11 @@
             form.reset();
             const okTip = form.querySelector(".js-comment-form-tip");
             if (okTip) okTip.textContent = "";
-            const details = form.closest("details");
-            if (details) details.open = false;
+            const replyFormWrap = form.closest("[data-reply-form-wrap]");
+            const replyFormState = getAlpineState(replyFormWrap);
+            if (replyFormState && "showReplyForm" in replyFormState) {
+              replyFormState.showReplyForm = false;
+            }
           } catch (e) {
             form.submit();
           } finally {

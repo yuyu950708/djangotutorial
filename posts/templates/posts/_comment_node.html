@@ -75,9 +75,20 @@
     {% endif %}
 
     {% if user.is_authenticated and not node.is_locked %}
-      <details class="mt-2">
-        <summary class="cursor-pointer text-sm font-medium text-sky-600 hover:underline">回覆</summary>
-        <form action="{% url 'posts:comment_create' post.pk %}" method="post" class="js-comment-create-form mt-2">
+      <div class="mt-2" x-data="{ showReplyForm: false }" data-reply-form-wrap>
+        <button
+          type="button"
+          class="text-sm font-medium text-sky-600 hover:underline"
+          @click="showReplyForm = !showReplyForm"
+          x-text="showReplyForm ? '收起回覆' : '回覆'"
+        ></button>
+        <form
+          action="{% url 'posts:comment_create' post.pk %}"
+          method="post"
+          class="js-comment-create-form mt-2"
+          x-show="showReplyForm"
+          x-cloak
+        >
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           <input type="hidden" name="parent_id" value="{{ node.id }}">
@@ -96,7 +107,7 @@
             >送出</button>
           </div>
         </form>
-      </details>
+      </div>
     {% endif %}
   </div>
 
@@ -115,14 +126,16 @@
 
 {% if node.replies %}
   {# 有子留言：預設折疊；replyCount 為 views 計算的整棵子樹回覆數（含多層），非僅直接子節點 #}
-  <div class="mt-2" x-data="{ showReplies: false, replyCount: {{ node.subtree_reply_count|default:0 }} }">
-    <button
-      type="button"
-      class="text-sm font-medium text-sky-500 transition-colors duration-200 hover:text-sky-600"
-      @click="showReplies = !showReplies"
-      x-text="showReplies ? '隱藏回覆' : '查看 ' + replyCount + ' 則回覆'"
-      x-cloak
-    ></button>
+  <details
+    class="mt-2"
+    data-reply-toggle
+    x-data="{ showReplies: false, replyCount: {{ node.subtree_reply_count|default:0 }} }"
+    :open="showReplies"
+    @toggle="showReplies = $el.open"
+  >
+    <summary class="cursor-pointer text-sm font-medium text-sky-500 transition-colors duration-200 hover:text-sky-600">
+      查看 <span x-text="replyCount"></span> 則回覆
+    </summary>
     {# x-show：未展開時不顯示子樹；x-transition：簡單淡入淡出（專案未載入 @alpinejs/collapse，故不用 x-collapse） #}
     <div
       class="mt-2 space-y-2 border-l border-slate-200 pl-4"
@@ -140,7 +153,7 @@
         {% include "posts/_comment_node.html" with node=child %}
       {% endfor %}
     </div>
-  </div>
+  </details>
 {% else %}
   {# 尚無子留言：保留容器給 AJAX 插入第一則回覆，維持 hidden #}
   <div
