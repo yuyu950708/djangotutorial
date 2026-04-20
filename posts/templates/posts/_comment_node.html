@@ -27,14 +27,14 @@
     </div>
 
     {% if user.is_authenticated and user.id == node.author_id %}
-      <div class="flex items-center gap-3 shrink-0">
-        <button @click="editing = true" class="text-xs font-medium text-slate-400 hover:text-sky-600 transition-colors">
+      <div class="mt-0.5 flex shrink-0 items-center gap-2 whitespace-nowrap">
+        <button @click="editing = true" class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium text-slate-400 transition-colors hover:text-sky-600">
           編輯
         </button>
         <form method="post" action="{% url 'posts:comment_delete' post.pk node.id %}" class="inline" onsubmit="return confirm('確定要刪除這則留言嗎？');">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors">
+          <button type="submit" class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium text-slate-400 transition-colors hover:text-rose-600">
             刪除
           </button>
         </form>

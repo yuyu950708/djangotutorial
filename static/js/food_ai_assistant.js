@@ -235,6 +235,13 @@ document.addEventListener("alpine:init", () => {
       if (el) el.scrollTop = el.scrollHeight;
     },
 
+    withRetryHint(message) {
+      const text = String(message || "");
+      const isTransient = /(timeout|逾時|429|502|503|504|上游暫時性錯誤)/i.test(text);
+      if (!isTransient) return text;
+      return `${text}\n\n小提醒：這通常是上游服務暫時忙碌或網路波動，請等 30-60 秒後再問一次。`;
+    },
+
     async sendMessage() {
       if (this.sending) return;
       const text = (this.input || "").trim();
@@ -310,14 +317,14 @@ document.addEventListener("alpine:init", () => {
         if (!res.ok) {
           throw new Error(data.error || res.statusText || "請求失敗");
         }
-        const replyText = data.reply || "（沒有回覆內容）";
+        const replyText = this.withRetryHint(data.reply || "（沒有回覆內容）");
         this.messages.push({
           role: "assistant",
           text: replyText,
           html: this.renderMessageHtml(replyText),
         });
       } catch (e) {
-        const errText = "抱歉：" + (e.message || "請稍後再試");
+        const errText = this.withRetryHint("抱歉：" + (e.message || "請稍後再試"));
         this.messages.push({
           role: "assistant",
           text: errText,
