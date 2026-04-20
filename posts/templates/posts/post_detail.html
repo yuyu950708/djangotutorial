@@ -60,10 +60,20 @@
 
     {% if user.is_authenticated %}
       {# 與動態牆相同：Alpine 狀態 + fetch，按讚不整頁重新整理 #}
-      <div class="mt-4 space-y-2" x-data="postInteractBlock({{ is_liked|yesno:'true,false' }}, {{ post.like_count }}, {{ is_collected|yesno:'true,false' }})">
+      <div class="mt-4 space-y-2" x-data="postInteractBlock({{ is_liked|yesno:'true,false' }}, {{ post.like_count }}, {{ is_collected|yesno:'true,false' }}, {{ post.collection_count|default:0 }})">
         <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-          <span x-text="count + ' 讚'"></span>
-          <span data-post-comment-count>{{ post.post_comments.count }} 留言</span>
+          <span class="inline-flex items-center gap-1">
+            <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+            <span x-text="count + ' 讚'"></span>
+          </span>
+          <span data-post-comment-count class="inline-flex items-center gap-1">
+            <i class="fa-solid fa-message" aria-hidden="true"></i>
+            <span data-post-comment-count-value>{{ post.post_comments.count }} 留言</span>
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+            <span x-text="collectionCount + ' 收藏'"></span>
+          </span>
         </div>
         <p x-show="showMsg" x-cloak class="text-xs text-slate-500" x-text="msgText"></p>
         <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
@@ -79,8 +89,10 @@
               type="submit"
               class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto"
               :disabled="submittingLike"
-              x-text="isLiked ? '取消按讚' : '按讚'"
-            ></button>
+            >
+              <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+              <span x-text="isLiked ? '取消按讚' : '按讚'"></span>
+            </button>
           </form>
           <form
             method="post"
@@ -94,15 +106,28 @@
               type="submit"
               class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
               :disabled="submittingCollect"
-              x-text="isCollected ? '取消收藏' : '收藏'"
-            ></button>
+            >
+              <i x-show="!isCollected" class="fa-regular fa-bookmark" aria-hidden="true"></i>
+              <i x-show="isCollected" x-cloak class="fa-solid fa-bookmark" aria-hidden="true"></i>
+              <span x-text="isCollected ? '取消收藏' : '收藏'"></span>
+            </button>
           </form>
         </div>
       </div>
     {% else %}
       <div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-        <span>{{ post.like_count }} 讚</span>
-        <span>{{ post.post_comments.count }} 留言</span>
+        <span class="inline-flex items-center gap-1">
+          <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+          <span>{{ post.like_count }} 讚</span>
+        </span>
+        <span class="inline-flex items-center gap-1">
+          <i class="fa-solid fa-message" aria-hidden="true"></i>
+          <span>{{ post.post_comments.count }} 留言</span>
+        </span>
+        <span class="inline-flex items-center gap-1">
+          <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+          <span>{{ post.collection_count|default:0 }} 收藏</span>
+        </span>
       </div>
     {% endif %}
 

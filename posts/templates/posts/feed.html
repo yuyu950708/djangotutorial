@@ -213,12 +213,22 @@
           {# Alpine：包一層，讓「讚數、按鈕文字、小提示」共用同一組狀態 #}
           <div
             class="space-y-2"
-            x-data="postInteractBlock({{ post.user_has_liked|yesno:'true,false' }}, {{ post.like_count }}, {{ post.user_has_collected|yesno:'true,false' }})"
+            x-data="postInteractBlock({{ post.user_has_liked|yesno:'true,false' }}, {{ post.like_count }}, {{ post.user_has_collected|yesno:'true,false' }}, {{ post.collection_count|default:0 }})"
           >
             <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
               {# x-text：讚數由 Alpine 的 count 更新，按讚後不用整頁重新整理 #}
-              <span x-text="count + ' 讚'"></span>
-              <span data-post-comment-count>{{ post.comment_count|default:0 }} 留言</span>
+              <span class="inline-flex items-center gap-1">
+                <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+                <span x-text="count + ' 讚'"></span>
+              </span>
+              <span data-post-comment-count class="inline-flex items-center gap-1">
+                <i class="fa-solid fa-message" aria-hidden="true"></i>
+                <span data-post-comment-count-value>{{ post.comment_count|default:0 }} 留言</span>
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                <span x-text="collectionCount + ' 收藏'"></span>
+              </span>
             </div>
 
             {# 小提示：成功或失敗時顯示，2 秒後自動隱藏（由 submitLike 裡的 setTimeout 控制） #}
@@ -238,8 +248,10 @@
                   type="submit"
                   class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-rose-300 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto"
                   :disabled="submittingLike"
-                  x-text="isLiked ? '取消按讚' : '按讚'"
-                ></button>
+                >
+                  <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+                  <span x-text="isLiked ? '取消按讚' : '按讚'"></span>
+                </button>
               </form>
               <form
                 method="post"
@@ -253,15 +265,28 @@
                   type="submit"
                   class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
                   :disabled="submittingCollect"
-                  x-text="isCollected ? '取消收藏' : '收藏'"
-                ></button>
+                >
+                  <i x-show="!isCollected" class="fa-regular fa-bookmark" aria-hidden="true"></i>
+                  <i x-show="isCollected" x-cloak class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                  <span x-text="isCollected ? '取消收藏' : '收藏'"></span>
+                </button>
               </form>
             </div>
           </div>
         {% else %}
           <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-            <span>{{ post.like_count }} 讚</span>
-            <span>{{ post.comment_count|default:0 }} 留言</span>
+            <span class="inline-flex items-center gap-1">
+              <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+              <span>{{ post.like_count }} 讚</span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <i class="fa-solid fa-message" aria-hidden="true"></i>
+              <span>{{ post.comment_count|default:0 }} 留言</span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+              <span>{{ post.collection_count|default:0 }} 收藏</span>
+            </span>
           </div>
         {% endif %}
 

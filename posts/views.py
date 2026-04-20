@@ -91,7 +91,10 @@ def feed(request):
     posts = (
         Post.objects.select_related("author", "author__profile", "category")
         .prefetch_related("likes", "post_comments", "tags")
-        .annotate(comment_count=Count("post_comments", distinct=True))
+        .annotate(
+            comment_count=Count("post_comments", distinct=True),
+            collection_count=Count("collections", distinct=True),
+        )
     )
     if search_query:
         posts = posts.filter(
@@ -249,7 +252,12 @@ def collect_toggle(request, pk):
             messages.success(request, "已收藏貼文。")
 
     if wants_json:
-        return JsonResponse({"is_collected": collected})
+        return JsonResponse(
+            {
+                "is_collected": collected,
+                "collection_count": post.collections.count(),
+            }
+        )
 
     next_url = (request.POST.get("next") or "").strip()
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
@@ -413,7 +421,9 @@ def comment_delete(request, pk, comment_pk):
 
 def post_detail(request, pk):
     post = get_object_or_404(
-        Post.objects.select_related("author", "author__profile", "category").prefetch_related("tags", "post_comments", "likes"),
+        Post.objects.select_related("author", "author__profile", "category")
+        .prefetch_related("tags", "post_comments", "likes")
+        .annotate(collection_count=Count("collections", distinct=True)),
         pk=pk,
     )
     is_liked = False

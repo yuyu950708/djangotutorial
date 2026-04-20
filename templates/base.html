@@ -275,11 +275,12 @@
     {% block content %}{% endblock %}
   </main>
   <script>
-    function postInteractBlock(isLikedInit, likeCountInit, isCollectedInit) {
+    function postInteractBlock(isLikedInit, likeCountInit, isCollectedInit, collectionCountInit) {
       return {
         isLiked: !!isLikedInit,
         count: Number(likeCountInit) || 0,
         isCollected: !!isCollectedInit,
+        collectionCount: Number(collectionCountInit) || 0,
         showMsg: false,
         msgText: "",
         hideTimer: null,
@@ -335,6 +336,7 @@
             if (!response.ok) throw new Error("bad");
             const data = await response.json();
             this.isCollected = !!data.is_collected;
+            this.collectionCount = Number(data.collection_count) || 0;
             this.bumpMsg(this.isCollected ? "已收藏" : "已取消收藏");
           } catch (e) {
             this.bumpMsg("操作失敗，請稍後再試");
@@ -496,7 +498,12 @@
             }
 
             if (countEl && typeof data.comment_count === "number") {
-              countEl.textContent = `${data.comment_count} 留言`;
+              const countValueEl = countEl.querySelector("[data-post-comment-count-value]");
+              if (countValueEl) {
+                countValueEl.textContent = `${data.comment_count} 留言`;
+              } else {
+                countEl.textContent = `${data.comment_count} 留言`;
+              }
             }
             form.reset();
             const okTip = form.querySelector(".js-comment-form-tip");
