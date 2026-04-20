@@ -120,17 +120,35 @@
             </div>
           </div>
         </template>
-        <div x-show="sending" class="flex justify-start gap-2" x-cloak>
+        <div
+          x-show="sending"
+          x-cloak
+          x-transition:enter="transition ease-out duration-200"
+          x-transition:enter-start="opacity-0 translate-y-1"
+          x-transition:enter-end="opacity-100 translate-y-0"
+          x-transition:leave="transition ease-in duration-150"
+          x-transition:leave-start="opacity-100 translate-y-0"
+          x-transition:leave-end="opacity-0 translate-y-1"
+          class="flex justify-start gap-2"
+        >
           <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
             <i class="fa-solid fa-robot text-sm"></i>
           </div>
-          <div class="rounded-2xl rounded-bl-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-            <span class="inline-flex items-center gap-1">
-              <span class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style="animation-delay: 0ms"></span>
-              <span class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style="animation-delay: 150ms"></span>
-              <span class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style="animation-delay: 300ms"></span>
-            </span>
-            <span class="ml-2">思考中</span>
+          <div class="food-ai-loader-bubble min-w-[156px] rounded-2xl rounded-bl-md border border-slate-200 px-4 py-3">
+            <div class="food-ai-loading-root" role="status" aria-label="Loading">
+              <div id="container">
+                <div class="divider" aria-hidden="true"></div>
+                <p class="loading-text" aria-label="Loading">
+                  <span class="letter" aria-hidden="true">L</span>
+                  <span class="letter" aria-hidden="true">o</span>
+                  <span class="letter" aria-hidden="true">a</span>
+                  <span class="letter" aria-hidden="true">d</span>
+                  <span class="letter" aria-hidden="true">i</span>
+                  <span class="letter" aria-hidden="true">n</span>
+                  <span class="letter" aria-hidden="true">g</span>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -164,6 +182,7 @@
             rows="2"
             class="min-h-[3rem] w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner outline-none ring-violet-200 placeholder:text-slate-400 focus:border-violet-400 focus:ring-2"
             placeholder="輸入訊息…（Enter 送出，Shift+Enter 換行）"
+            :disabled="sending"
             @keydown.enter.prevent="!$event.shiftKey && sendMessage()"
           ></textarea>
           <button

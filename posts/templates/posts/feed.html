@@ -40,6 +40,32 @@
         <a href="{% url 'posts:feed' %}" class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">清除</a>
       </div>
 
+      <div id="feed-selected-categories-box" class="sm:col-span-2 {% if not selected_category_ids %}hidden{% endif %}">
+        <div class="mt-1 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+          <p class="text-xs font-medium text-emerald-700">搜尋中分類</p>
+          <div id="feed-selected-categories-list" class="mt-1 flex flex-wrap gap-1.5">
+            {% for c in categories %}
+              {% if c.id in selected_category_ids %}
+                <span class="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">{{ c.name }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div id="feed-selected-tags-box" class="sm:col-span-2 {% if not selected_tag_ids %}hidden{% endif %}">
+        <div class="mt-1 rounded-lg border border-sky-100 bg-sky-50 px-3 py-2">
+          <p class="text-xs font-medium text-sky-700">搜尋中標籤</p>
+          <div id="feed-selected-tags-list" class="mt-1 flex flex-wrap gap-1.5">
+            {% for t in tags %}
+              {% if t.id in selected_tag_ids %}
+                <span class="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-sky-700 ring-1 ring-sky-200">#{{ t.name }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
       <div class="grid gap-3 sm:col-span-2 sm:grid-cols-2">
         <div>
           <label for="feed-category" class="mb-1 block text-sm font-medium text-slate-600">分類</label>
@@ -332,4 +358,64 @@
     </nav>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const categorySelect = document.getElementById("feed-category");
+    const selectedCategoriesBox = document.getElementById("feed-selected-categories-box");
+    const selectedCategoriesList = document.getElementById("feed-selected-categories-list");
+    const tagSelect = document.getElementById("feed-tag");
+    const selectedTagsBox = document.getElementById("feed-selected-tags-box");
+    const selectedTagsList = document.getElementById("feed-selected-tags-list");
+    if (
+      !categorySelect ||
+      !selectedCategoriesBox ||
+      !selectedCategoriesList ||
+      !tagSelect ||
+      !selectedTagsBox ||
+      !selectedTagsList
+    ) return;
+
+    function renderSelectedChips(selectEl, boxEl, listEl, chipClass) {
+      const selectedOptions = Array.from(selectEl.selectedOptions || []);
+      listEl.innerHTML = "";
+      if (!selectedOptions.length) {
+        boxEl.classList.add("hidden");
+        return;
+      }
+      boxEl.classList.remove("hidden");
+      selectedOptions.forEach((opt) => {
+        const chip = document.createElement("span");
+        chip.className = chipClass;
+        chip.textContent = opt.textContent.trim();
+        listEl.appendChild(chip);
+      });
+    }
+
+    function renderSelectedFiltersNow() {
+      renderSelectedChips(
+        categorySelect,
+        selectedCategoriesBox,
+        selectedCategoriesList,
+        "rounded-full bg-white px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200"
+      );
+      renderSelectedChips(
+        tagSelect,
+        selectedTagsBox,
+        selectedTagsList,
+        "rounded-full bg-white px-2.5 py-1 text-xs font-medium text-sky-700 ring-1 ring-sky-200"
+      );
+    }
+
+    categorySelect.addEventListener("change", renderSelectedFiltersNow);
+    categorySelect.addEventListener("click", renderSelectedFiltersNow);
+    categorySelect.addEventListener("keyup", renderSelectedFiltersNow);
+    tagSelect.addEventListener("change", renderSelectedFiltersNow);
+    tagSelect.addEventListener("click", renderSelectedFiltersNow);
+    tagSelect.addEventListener("keyup", renderSelectedFiltersNow);
+    renderSelectedFiltersNow();
+  });
+</script>
 {% endblock %}
