@@ -62,7 +62,9 @@ class PostAdmin(ExportMixin, admin.ModelAdmin):
     resource_classes = [PostResource]
     inlines = [CommentInline]
 
-    date_hierarchy = "created_at"
+    # MySQL 未安裝 timezone tables 時，date_hierarchy 會觸發時區換算錯誤。
+    # 先停用階層日期導覽，避免 /admin/posts/post/ 500。
+    date_hierarchy = None
     list_display = ("id", "title", "author", "category", "like_count", "created_at")
     list_filter = ("category", "tags", "author", "created_at", "updated_at")
     search_fields = ("title", "content", "author__username", "author__email")
