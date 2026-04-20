@@ -490,12 +490,16 @@
         if (!allImages.length) return;
 
         const gallery = document.createElement("div");
-        gallery.className = "image-gallery mt-3 flex w-full gap-3 overflow-x-auto snap-x pb-2";
+        gallery.className = "image-gallery mt-3 flex w-full gap-3 overflow-x-auto snap-x snap-mandatory pb-2";
 
         allImages.forEach((img) => {
           const oldParent = img.parentElement;
-          img.className = "max-h-[300px] w-auto shrink-0 snap-center rounded-lg object-contain bg-slate-50";
-          gallery.appendChild(img);
+          img.className =
+            "mx-auto max-h-[300px] w-auto max-w-full rounded-lg object-contain bg-slate-50";
+          const slide = document.createElement("div");
+          slide.className = "flex min-w-full shrink-0 snap-center items-center justify-center";
+          slide.appendChild(img);
+          gallery.appendChild(slide);
           if (
             oldParent &&
             oldParent.tagName === "P" &&
