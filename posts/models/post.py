@@ -56,6 +56,14 @@ class Post(models.Model):
         default=VISIBILITY_PUBLIC,
     )
     like_count = models.PositiveIntegerField(_("讚數"), default=0)
+    latest_health_insight = models.ForeignKey(
+        "posts.PostHealthInsight",
+        on_delete=models.SET_NULL,
+        related_name="+",
+        blank=True,
+        null=True,
+        verbose_name=_("最新健康分析"),
+    )
     created_at = models.DateTimeField(_("建立時間"), auto_now_add=True)
     updated_at = models.DateTimeField(_("更新時間"), auto_now=True)
 

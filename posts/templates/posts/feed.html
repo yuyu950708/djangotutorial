@@ -36,12 +36,127 @@
   .post-compose-details[open] .compose-chevron {
     transform: rotate(180deg);
   }
+
+  .health-mode-toggle {
+    --track-off: #eef2f7;
+    --mint: #8ee8ca;
+    --lavender: #c9bcff;
+    --peach: #ffcfae;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    transition: transform 220ms cubic-bezier(.22,.9,.33,1);
+  }
+  .health-mode-toggle:hover {
+    transform: scale(1.03);
+  }
+  .health-mode-track {
+    width: 56px;
+    height: 32px;
+    border-radius: 999px;
+    position: relative;
+    background: var(--track-off);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.8), 0 6px 16px rgba(15,23,42,.1);
+    transition: all 260ms cubic-bezier(.22,.9,.33,1);
+  }
+  .health-mode-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 5px 12px rgba(15,23,42,.18);
+    transition: all 260ms cubic-bezier(.22,.9,.33,1);
+  }
+  .health-mode-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgb(51 65 85);
+  }
+  .health-mode-enabled .health-mode-track {
+    background: linear-gradient(135deg, var(--mint), var(--lavender), var(--peach));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.5), 0 10px 20px rgba(142,232,202,.35);
+  }
+  .health-mode-enabled .health-mode-thumb {
+    left: 27px;
+  }
+
+  .health-badge {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    z-index: 10;
+    border-radius: 16px;
+    padding: 10px 12px;
+    color: rgb(15 23 42);
+    border: 1px solid rgba(255,255,255,.5);
+    background: linear-gradient(140deg, rgba(255,255,255,.46), rgba(255,255,255,.22));
+    backdrop-filter: blur(14px) saturate(1.18);
+    -webkit-backdrop-filter: blur(14px) saturate(1.18);
+    box-shadow: 0 10px 24px rgba(15,23,42,.2);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 260ms ease, transform 330ms cubic-bezier(.22,.9,.33,1);
+  }
+  .health-mode-on .health-badge {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .health-badge-kcal {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .health-badge-rank,
+  .health-badge-reason {
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .health-badge.rank-A { box-shadow: 0 10px 24px rgba(125,211,252,.26); }
+  .health-badge.rank-B { box-shadow: 0 10px 24px rgba(110,231,183,.24); }
+  .health-badge.rank-C { box-shadow: 0 10px 24px rgba(253,224,71,.24); }
+  .health-badge.rank-D { box-shadow: 0 10px 24px rgba(252,165,165,.28); }
+  .post-gallery-wrap {
+    position: relative;
+  }
+  .health-badge-inline {
+    margin-top: 10px;
+    border-radius: 12px;
+    padding: 8px 10px;
+    border: 1px solid rgba(148,163,184,.28);
+    background: linear-gradient(140deg, rgba(241,245,249,.8), rgba(226,232,240,.62));
+    color: rgb(30 41 59);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 220ms ease, transform 300ms cubic-bezier(.22,.9,.33,1);
+  }
+  .health-mode-on .health-badge-inline {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .health-badge-inline .health-badge-kcal {
+    font-size: 16px;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="mx-auto w-full max-w-3xl">
   <div id="feed-top-snap" class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
+    <div class="mb-3 flex items-center justify-between gap-3">
+      <p class="text-sm font-semibold text-slate-700">探索美食動態</p>
+      <button id="health-mode-toggle" type="button" class="health-mode-toggle" aria-pressed="false">
+        <span class="health-mode-track"><span class="health-mode-thumb"></span></span>
+        <span class="health-mode-label">健康達人</span>
+      </button>
+    </div>
     <form id="feed-search-form" action="{% url 'posts:feed' %}" method="get" data-show-loading-on-submit class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
       <input
         type="text"
@@ -198,7 +313,7 @@
 
   <div class="space-y-3 sm:space-y-4">
     {% for post in posts %}
-      <article class="rounded-xl bg-white p-4 shadow sm:p-5" data-post-article data-post-id="{{ post.id }}" data-scroll-reveal>
+      <article class="relative overflow-hidden rounded-xl bg-white p-4 shadow sm:p-5" data-post-article data-post-id="{{ post.id }}" data-scroll-reveal>
         <div class="mb-2 flex items-start gap-3">
           <a href="{% url 'accounts:profile_detail' post.author.username %}" class="shrink-0">
             {% if post.author.profile.avatar %}
@@ -248,15 +363,32 @@
           {{ post.content|safe }}
         </div>
 
-        {% for img in post.gallery_images %}
-          <div class="mb-2 flex w-full justify-center">
-            <img
-              src="{{ img.url }}"
-              alt=""
-              class="post-cover-image max-h-[500px] w-auto max-w-full object-contain rounded-lg"
-            >
+        {% if post.gallery_images %}
+          <div class="post-gallery-wrap">
+            {% for img in post.gallery_images %}
+              <div class="mb-2 flex w-full justify-center">
+                <img
+                  src="{{ img.url }}"
+                  alt=""
+                  class="post-cover-image max-h-[500px] w-auto max-w-full object-contain rounded-lg"
+                >
+              </div>
+            {% endfor %}
+            {% if post.latest_health_insight and post.latest_health_insight.status == "completed" %}
+              <div class="health-badge rank-{{ post.latest_health_insight.health_rank }}" data-health-badge>
+                <p class="health-badge-kcal">{{ post.latest_health_insight.calories }} kcal</p>
+                <p class="health-badge-rank">健康 {{ post.latest_health_insight.health_rank }}</p>
+                <p class="health-badge-reason">{{ post.latest_health_insight.reason }}</p>
+              </div>
+            {% endif %}
           </div>
-        {% endfor %}
+        {% elif post.latest_health_insight and post.latest_health_insight.status == "completed" %}
+          <div class="health-badge-inline rank-{{ post.latest_health_insight.health_rank }}" data-health-badge>
+            <p class="health-badge-kcal">{{ post.latest_health_insight.calories }} kcal</p>
+            <p class="health-badge-rank">健康 {{ post.latest_health_insight.health_rank }}</p>
+            <p class="health-badge-reason">{{ post.latest_health_insight.reason }}</p>
+          </div>
+        {% endif %}
 
         {% if user.is_authenticated %}
           {# Alpine：包一層，讓「讚數、按鈕文字、小提示」共用同一組狀態 #}
@@ -497,52 +629,75 @@
     const selectedTagsBox = document.getElementById("feed-selected-tags-box");
     const selectedTagsList = document.getElementById("feed-selected-tags-list");
     if (
-      !categorySelect ||
-      !selectedCategoriesBox ||
-      !selectedCategoriesList ||
-      !tagSelect ||
-      !selectedTagsBox ||
-      !selectedTagsList
-    ) return;
-
-    function renderSelectedChips(selectEl, boxEl, listEl, chipClass) {
-      const selectedOptions = Array.from(selectEl.selectedOptions || []);
-      listEl.innerHTML = "";
-      if (!selectedOptions.length) {
-        boxEl.classList.add("hidden");
-        return;
+      categorySelect &&
+      selectedCategoriesBox &&
+      selectedCategoriesList &&
+      tagSelect &&
+      selectedTagsBox &&
+      selectedTagsList
+    ) {
+      function renderSelectedChips(selectEl, boxEl, listEl, chipClass) {
+        const selectedOptions = Array.from(selectEl.selectedOptions || []);
+        listEl.innerHTML = "";
+        if (!selectedOptions.length) {
+          boxEl.classList.add("hidden");
+          return;
+        }
+        boxEl.classList.remove("hidden");
+        selectedOptions.forEach((opt) => {
+          const chip = document.createElement("span");
+          chip.className = chipClass;
+          chip.textContent = opt.textContent.trim();
+          listEl.appendChild(chip);
+        });
       }
-      boxEl.classList.remove("hidden");
-      selectedOptions.forEach((opt) => {
-        const chip = document.createElement("span");
-        chip.className = chipClass;
-        chip.textContent = opt.textContent.trim();
-        listEl.appendChild(chip);
+
+      function renderSelectedFiltersNow() {
+        renderSelectedChips(
+          categorySelect,
+          selectedCategoriesBox,
+          selectedCategoriesList,
+          "rounded-full bg-white px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200"
+        );
+        renderSelectedChips(
+          tagSelect,
+          selectedTagsBox,
+          selectedTagsList,
+          "rounded-full bg-white px-2.5 py-1 text-xs font-medium text-sky-700 ring-1 ring-sky-200"
+        );
+      }
+
+      categorySelect.addEventListener("change", renderSelectedFiltersNow);
+      categorySelect.addEventListener("click", renderSelectedFiltersNow);
+      categorySelect.addEventListener("keyup", renderSelectedFiltersNow);
+      tagSelect.addEventListener("change", renderSelectedFiltersNow);
+      tagSelect.addEventListener("click", renderSelectedFiltersNow);
+      tagSelect.addEventListener("keyup", renderSelectedFiltersNow);
+      renderSelectedFiltersNow();
+    }
+
+    const healthModeToggle = document.getElementById("health-mode-toggle");
+    const healthCards = document.querySelectorAll("[data-post-article]");
+    const storageKey = "feed-health-mode-enabled";
+    let isHealthMode = window.localStorage.getItem(storageKey) === "1";
+
+    function paintHealthMode() {
+      if (!healthModeToggle) return;
+      healthModeToggle.classList.toggle("health-mode-enabled", isHealthMode);
+      healthModeToggle.setAttribute("aria-pressed", isHealthMode ? "true" : "false");
+      healthCards.forEach((card) => {
+        card.classList.toggle("health-mode-on", isHealthMode);
       });
     }
 
-    function renderSelectedFiltersNow() {
-      renderSelectedChips(
-        categorySelect,
-        selectedCategoriesBox,
-        selectedCategoriesList,
-        "rounded-full bg-white px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200"
-      );
-      renderSelectedChips(
-        tagSelect,
-        selectedTagsBox,
-        selectedTagsList,
-        "rounded-full bg-white px-2.5 py-1 text-xs font-medium text-sky-700 ring-1 ring-sky-200"
-      );
+    if (healthModeToggle) {
+      healthModeToggle.addEventListener("click", () => {
+        isHealthMode = !isHealthMode;
+        window.localStorage.setItem(storageKey, isHealthMode ? "1" : "0");
+        paintHealthMode();
+      });
+      paintHealthMode();
     }
-
-    categorySelect.addEventListener("change", renderSelectedFiltersNow);
-    categorySelect.addEventListener("click", renderSelectedFiltersNow);
-    categorySelect.addEventListener("keyup", renderSelectedFiltersNow);
-    tagSelect.addEventListener("change", renderSelectedFiltersNow);
-    tagSelect.addEventListener("click", renderSelectedFiltersNow);
-    tagSelect.addEventListener("keyup", renderSelectedFiltersNow);
-    renderSelectedFiltersNow();
   });
 </script>
 {% endblock %}

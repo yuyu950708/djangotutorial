@@ -19,7 +19,18 @@ from urllib.parse import urlencode
 
 from .ai_chat import decode_client_image_base64, get_assistant_reply
 from .forms import CategoryForm, PostEditForm, PostForm, TagForm
-from .models import AiChatLog, Category, Collection, CommentLike, Like, Post, PostComment, SearchLog, Tag
+from .models import (
+    AiChatLog,
+    Category,
+    Collection,
+    CommentLike,
+    Like,
+    Post,
+    PostComment,
+    SearchLog,
+    Tag,
+)
+from .tasks import analyze_post_health_task
 
 
 def _wants_json(request):
@@ -85,13 +96,18 @@ def feed(request):
             post.save()
             form.instance = post
             form.save_m2m()
+            try:
+                analyze_post_health_task.delay(post.id)
+            except AttributeError:
+                # Celery 未啟用時，直接同步執行，避免功能失效
+                analyze_post_health_task(post.id)
             messages.success(request, "已發布貼文。")
             return redirect("posts:feed")
     else:
         form = PostEditForm()
 
     posts = (
-        Post.objects.select_related("author", "author__profile", "category")
+        Post.objects.select_related("author", "author__profile", "category", "latest_health_insight")
         .prefetch_related("likes", "post_comments", "tags")
         .annotate(
             comment_count=Count("post_comments", distinct=True),

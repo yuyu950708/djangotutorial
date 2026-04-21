@@ -5,7 +5,19 @@ from django.http import HttpResponse
 from import_export import resources
 from import_export.admin import ExportMixin
 
-from .models import AiChatLog, Category, Collection, CommentLike, Follow, Like, Post, PostComment, SearchLog, Tag
+from .models import (
+    AiChatLog,
+    Category,
+    Collection,
+    CommentLike,
+    Follow,
+    Like,
+    Post,
+    PostComment,
+    PostHealthInsight,
+    SearchLog,
+    Tag,
+)
 
 
 class PostResource(resources.ModelResource):
@@ -157,3 +169,13 @@ class AiChatLogAdmin(admin.ModelAdmin):
     @admin.display(description="有圖片")
     def has_image(self, obj):
         return bool(obj.image)
+
+
+@admin.register(PostHealthInsight)
+class PostHealthInsightAdmin(admin.ModelAdmin):
+    list_display = ("id", "post", "health_rank", "calories", "status", "model_name", "created_at")
+    list_filter = ("health_rank", "status", "created_at")
+    search_fields = ("post__title", "post__author__username", "reason", "model_name")
+    autocomplete_fields = ("post",)
+    ordering = ("-created_at",)
+    list_select_related = ("post",)

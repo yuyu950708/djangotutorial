@@ -8,3 +8,5 @@ tinycss2>=1.4
 PyMySQL>=1.1
 django-import-export>=4.3
 mysqlclient>=2.1
+celery>=5.4
+redis>=5.0
