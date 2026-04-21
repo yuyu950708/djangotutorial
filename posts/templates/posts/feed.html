@@ -5,6 +5,21 @@
 {% block extra_head %}
 {% if user.is_authenticated %}{{ form.media }}{% endif %}
 <style>
+  /* 按下「回到最上方」時暫時啟用，讓捲動結束貼齊頂部區塊（配合 sticky 導覽列） */
+  html.feed-back-to-top-snap {
+    scroll-snap-type: y proximity;
+    scroll-padding-top: 4.5rem;
+  }
+  @media (min-width: 640px) {
+    html.feed-back-to-top-snap {
+      scroll-padding-top: 5rem;
+    }
+  }
+  #feed-top-snap {
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+  }
+
   /* Make the compose editor shorter on the feed page only */
   .post-compose .cke_contents {
     height: 180px !important;
@@ -26,7 +41,7 @@
 
 {% block content %}
 <div class="mx-auto w-full max-w-3xl">
-  <div class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
+  <div id="feed-top-snap" class="mb-4 rounded-xl bg-white p-4 shadow sm:p-5">
     <form id="feed-search-form" action="{% url 'posts:feed' %}" method="get" data-show-loading-on-submit class="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
       <input
         type="text"
@@ -443,8 +458,24 @@
     }
 
     if (newPostsBtn) {
+      function endFeedBackToTopSnap() {
+        document.documentElement.classList.remove("feed-back-to-top-snap");
+      }
+
       newPostsBtn.addEventListener("click", () => {
+        document.documentElement.classList.add("feed-back-to-top-snap");
         window.scrollTo({ top: 0, behavior: "smooth" });
+        if ("onscrollend" in window) {
+          window.addEventListener(
+            "scrollend",
+            () => {
+              endFeedBackToTopSnap();
+            },
+            { once: true }
+          );
+        } else {
+          window.setTimeout(endFeedBackToTopSnap, 700);
+        }
         if (hasNewPosts) {
           window.setTimeout(() => {
             window.location.reload();
