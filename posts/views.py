@@ -445,7 +445,7 @@ def comment_delete(request, pk, comment_pk):
 
 def post_detail(request, pk):
     post = get_object_or_404(
-        Post.objects.select_related("author", "author__profile", "category")
+        Post.objects.select_related("author", "author__profile", "category", "latest_health_insight")
         .prefetch_related("tags", "post_comments", "likes")
         .annotate(collection_count=Count("collections", distinct=True)),
         pk=pk,
