@@ -1,99 +1,16 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ post.title|default:"貼文" }} - 等等吃啥{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/health_mode_ui.css' %}?v=20260421b">
 <style>
-  .post-gallery-wrap {
-    position: relative;
-  }
-  .health-badge {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
-    z-index: 10;
-    border-radius: 20px 20px 20px 4px;
-    padding: 12px 14px 11px;
-    width: fit-content;
-    max-width: min(84%, 360px);
+  .health-mode-on .health-badge {
     display: inline-flex;
-    flex-direction: column;
-    color: rgb(15 23 42);
-    border: 1px solid rgba(255,255,255,.62);
-    background: linear-gradient(140deg, rgba(255,255,255,.46), rgba(255,255,255,.22));
-    backdrop-filter: blur(14px) saturate(1.18);
-    -webkit-backdrop-filter: blur(14px) saturate(1.18);
-    box-shadow: 0 18px 34px rgba(15,23,42,.28);
-    pointer-events: none;
-    animation: healthBadgeIn 420ms cubic-bezier(.17,.89,.34,1.25) both;
-    transform-origin: center bottom;
   }
-  @keyframes healthBadgeIn {
-    0% { opacity: 0; transform: translateY(16px) scale(.96); }
-    72% { opacity: 1; transform: translateY(-2px) scale(1.015); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .health-badge-score {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    min-width: 34px;
-    height: 34px;
-    padding: 0 9px;
-    border-radius: 999px;
+  .health-mode-on .health-badge-inline {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 17px;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: .02em;
-    color: #fff;
-    box-shadow: 0 8px 16px rgba(15,23,42,.2);
-  }
-  .health-badge-score.rank-A { background: #34c759; }
-  .health-badge-score.rank-B { background: #ffd60a; color: rgba(0,0,0,.82); }
-  .health-badge-score.rank-C { background: #ff9f0a; }
-  .health-badge-score.rank-D { background: #ff3b30; }
-  .health-badge-kcal {
-    font-size: 22px;
-    font-weight: 800;
-    line-height: 1.1;
-    padding-right: 40px;
-  }
-  .health-badge-meta {
-    margin-top: 2px;
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(15,23,42,.72);
-    padding-right: 40px;
-    line-height: 1.3;
-  }
-  .health-badge-reason {
-    margin-top: 4px;
-    font-size: 11px;
-    color: rgba(0,0,0,.6);
-    padding-right: 40px;
-    line-height: 1.35;
-  }
-  .health-badge-inline {
-    margin-top: 12px;
-    border-radius: 20px 20px 20px 4px;
-    padding: 12px 14px 11px;
-    border: 1px solid rgba(255,255,255,.62);
-    background: linear-gradient(140deg, rgba(255,255,255,.52), rgba(241,245,249,.78));
-    color: rgb(15 23 42);
-    position: relative;
-    overflow: hidden;
-    width: fit-content;
-    max-width: min(84%, 360px);
-    box-shadow: 0 16px 30px rgba(15,23,42,.16);
-    animation: healthBadgeIn 400ms cubic-bezier(.17,.89,.34,1.25) both;
-    transform-origin: left bottom;
-  }
-  .health-badge-inline .health-badge-reason,
-  .health-badge-inline .health-badge-meta {
-    color: rgba(0,0,0,.6);
   }
 </style>
 {% endblock %}
@@ -149,35 +66,36 @@
     </div>
     {% if post.gallery_images %}
       <div class="post-gallery-wrap">
-        {% for img in post.gallery_images %}
-          <div class="mt-3 flex w-full justify-center">
-            <img
-              src="{{ img.url }}"
-              alt=""
-              class="post-cover-image max-h-[500px] w-auto max-w-full object-contain rounded-lg"
-            >
+        <div class="apple-carousel {% if post.gallery_images|length <= 1 %}is-single{% endif %}" data-apple-carousel>
+          <div class="apple-carousel-track" data-carousel-track>
+            {% for img in post.gallery_images %}
+              <div class="apple-carousel-slide">
+                <img src="{{ img.url }}" alt="" class="post-cover-image">
+              </div>
+            {% endfor %}
           </div>
-        {% endfor %}
-        {% if post.latest_health_insight and post.latest_health_insight.status == "completed" %}
-          <div class="health-badge rank-{{ post.latest_health_insight.health_rank }}">
-            <span class="health-badge-score rank-{{ post.latest_health_insight.health_rank }}">
-              {{ post.latest_health_insight.health_rank }}
-            </span>
-            <p class="health-badge-kcal">{{ post.latest_health_insight.calories }} kcal</p>
-            <p class="health-badge-meta">健康 {{ post.latest_health_insight.health_rank }}</p>
-            <p class="health-badge-reason">{{ post.latest_health_insight.reason }}</p>
+          <button type="button" class="apple-carousel-arrow apple-carousel-arrow-left" data-carousel-prev aria-label="上一張">
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="apple-carousel-arrow apple-carousel-arrow-right" data-carousel-next aria-label="下一張">
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          <div class="apple-carousel-dots" data-carousel-dots>
+            {% for img in post.gallery_images %}
+              <button
+                type="button"
+                class="apple-carousel-dot {% if forloop.first %}is-active{% endif %}"
+                data-carousel-dot
+                data-index="{{ forloop.counter0 }}"
+                aria-label="切換到第 {{ forloop.counter }} 張"
+              ></button>
+            {% endfor %}
           </div>
-        {% endif %}
+        </div>
+        {% include "posts/_health_badge.html" with insight=post.latest_health_insight inline=False %}
       </div>
     {% elif post.latest_health_insight and post.latest_health_insight.status == "completed" %}
-      <div class="health-badge-inline rank-{{ post.latest_health_insight.health_rank }}">
-        <span class="health-badge-score rank-{{ post.latest_health_insight.health_rank }}">
-          {{ post.latest_health_insight.health_rank }}
-        </span>
-        <p class="health-badge-kcal">{{ post.latest_health_insight.calories }} kcal</p>
-        <p class="health-badge-meta">健康 {{ post.latest_health_insight.health_rank }}</p>
-        <p class="health-badge-reason">{{ post.latest_health_insight.reason }}</p>
-      </div>
+      {% include "posts/_health_badge.html" with insight=post.latest_health_insight inline=True %}
     {% endif %}
 
     {% if user.is_authenticated %}
@@ -297,5 +215,18 @@
 >
   回首頁
 </a>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/apple_carousel.js' %}?v=20260421b"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const enabled = window.localStorage.getItem("feed-health-mode-enabled") === "1";
+    document.documentElement.classList.toggle("health-mode-on", enabled);
+    if (window.initAppleCarousels) {
+      window.initAppleCarousels();
+    }
+  });
+</script>
 {% endblock %}
 
