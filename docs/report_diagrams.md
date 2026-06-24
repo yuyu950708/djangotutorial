@@ -1,6 +1,18 @@
 # EatWhat 報告用圖表（Mermaid）
 
-可直接複製到支援 Mermaid 的編輯器（GitHub、Typora、VS Code 外掛），或匯出成 PNG 貼進 Word / PowerPoint。
+可直接複製到支援 Mermaid 的編輯器（GitHub、Typora、VS Code 外掛），或匯出成 PNG 貼進 Word / PowerPoint / Notion。
+
+## 已匯出的 PNG（最新版）
+
+| 圖表 | PNG 檔案 | Mermaid 原始檔 |
+| --- | --- | --- |
+| Use Case 用例圖 | [notion/images/use_case.png](notion/images/use_case.png) | [diagrams/use_case.mmd](diagrams/use_case.mmd) |
+| ERD 實體關聯圖 | [notion/images/erd.png](notion/images/erd.png) | [diagrams/erd.mmd](diagrams/erd.mmd) |
+| 系統架構圖 | [notion/images/architecture.png](notion/images/architecture.png) | [diagrams/architecture.mmd](diagrams/architecture.mmd) |
+| 健康分析流程 | [notion/images/health_flow.png](notion/images/health_flow.png) | [diagrams/health_flow.mmd](diagrams/health_flow.mmd) |
+| 推薦流程圖 | [notion/images/recommendation_flow.png](notion/images/recommendation_flow.png) | [diagrams/recommendation_flow.mmd](diagrams/recommendation_flow.mmd) |
+
+**Notion 完整文件：** [notion/EatWhat_Notion.md](notion/EatWhat_Notion.md)（含匯入教學 [notion/README.md](notion/README.md)）
 
 ---
 

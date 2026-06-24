@@ -1,0 +1,138 @@
+erDiagram
+    USERS ||--|| PROFILES : has
+    USERS ||--o{ POSTS : authors
+    USERS ||--o{ LIKES : gives
+    USERS ||--o{ COLLECTIONS : saves
+    USERS ||--o{ FOLLOWS : follower
+    USERS ||--o{ FOLLOWS : following
+    USERS ||--o{ POST_COMMENTS : writes
+    USERS ||--o{ COMMENT_LIKES : likes
+    USERS ||--o{ SEARCH_LOGS : searches
+    USERS ||--o{ AI_CHAT_LOGS : chats
+    USERS ||--o{ NOTIFICATIONS : receives
+
+    CATEGORIES ||--o{ POSTS : categorizes
+    POSTS }o--o{ TAGS : tagged
+    POSTS ||--o{ LIKES : liked
+    POSTS ||--o{ COLLECTIONS : collected
+    POSTS ||--o{ POST_COMMENTS : has
+    POSTS ||--o{ POST_HEALTH_INSIGHTS : analyzed
+    POSTS ||--o{ NOTIFICATIONS : relates
+
+    POST_COMMENTS ||--o{ POST_COMMENTS : replies
+    POST_COMMENTS ||--o{ COMMENT_LIKES : liked
+    POST_COMMENTS ||--o{ NOTIFICATIONS : relates
+
+    USERS {
+        int id
+        string username
+        string email
+        string role
+        datetime created_at
+    }
+
+    PROFILES {
+        int user_id
+        string avatar
+        string bio
+        string dietary_preference
+    }
+
+    POSTS {
+        int id
+        int user_id
+        int category_id
+        int latest_health_insight_id
+        string title
+        string content
+        string visibility
+        int like_count
+        datetime created_at
+    }
+
+    CATEGORIES {
+        int id
+        string name
+    }
+
+    TAGS {
+        int id
+        string name
+    }
+
+    LIKES {
+        int id
+        int user_id
+        int post_id
+        datetime created_at
+    }
+
+    COLLECTIONS {
+        int id
+        int user_id
+        int post_id
+        datetime created_at
+    }
+
+    FOLLOWS {
+        int id
+        int follower_id
+        int following_id
+        datetime created_at
+    }
+
+    POST_COMMENTS {
+        int id
+        int author_id
+        int post_id
+        int parent_id
+        int root_id
+        string content
+        int like_count
+        datetime created_at
+    }
+
+    COMMENT_LIKES {
+        int id
+        int user_id
+        int comment_id
+        datetime created_at
+    }
+
+    POST_HEALTH_INSIGHTS {
+        int id
+        int post_id
+        int calories
+        string health_rank
+        string reason
+        string status
+        string model_name
+        datetime created_at
+    }
+
+    NOTIFICATIONS {
+        int id
+        int recipient_id
+        int actor_id
+        int post_id
+        int comment_id
+        string notification_type
+        bool is_read
+        datetime created_at
+    }
+
+    SEARCH_LOGS {
+        int id
+        int user_id
+        string keyword
+        datetime created_at
+    }
+
+    AI_CHAT_LOGS {
+        int id
+        int user_id
+        string message
+        string assistant_reply
+        string model_name
+        datetime created_at
+    }

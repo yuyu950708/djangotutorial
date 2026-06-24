@@ -1,0 +1,102 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "16px", "primaryColor": "#ecfdf5", "primaryBorderColor": "#0d9488", "lineColor": "#64748b", "secondaryColor": "#f0fdfa", "tertiaryColor": "#f8fafc"}}}%%
+flowchart TB
+    subgraph ACTORS[" "]
+        direction LR
+        G((訪客))
+        M((會員))
+        AD((管理員))
+    end
+
+    subgraph SYS["EatWhat 美食社群平台"]
+        direction TB
+
+        subgraph AUTH["認證與帳號"]
+            UC1[註冊帳號]
+            UC2[登入 / 登出]
+            UC3[CAPTCHA 驗證]
+            UC4[Google OAuth 登入]
+            UC5[編輯個人檔案]
+            UC6[設定飲食偏好]
+        end
+
+        subgraph CONTENT["貼文與瀏覽"]
+            UC7[瀏覽動態牆]
+            UC8[發布貼文]
+            UC9[編輯 / 刪除貼文]
+            UC10[上傳最多 3 張圖片]
+            UC11[設定公開 / 私密]
+            UC12[瀏覽貼文詳情]
+            UC13[管理分類與標籤]
+        end
+
+        subgraph SOCIAL["社群互動"]
+            UC14[按讚貼文]
+            UC15[留言與回覆]
+            UC16[留言按讚]
+            UC17[收藏貼文]
+            UC18[追蹤使用者]
+            UC19[查看收藏列表]
+        end
+
+        subgraph DISCOVER["探索與推薦"]
+            UC20[關鍵字搜尋]
+            UC21[分類 / 標籤篩選]
+            UC22[個人化推薦 Top 3]
+            UC23[查看通知中心]
+        end
+
+        subgraph AI["AI 與健康"]
+            UC24[AI 美食助理對話]
+            UC25[上傳圖片詢問 AI]
+            UC26[切換健康達人模式]
+            UC27[查看熱量與健康等級]
+        end
+
+        subgraph API["API 與管理"]
+            UC28[呼叫 REST API]
+            UC29[瀏覽 Swagger 文件]
+            UC30[後台管理資料]
+            UC31[CSV 匯出]
+        end
+    end
+
+    G --> UC7
+    G --> UC1
+    G --> UC2
+    G --> UC4
+    G --> UC12
+
+    M --> UC2
+    M --> UC3
+    M --> UC4
+    M --> UC5
+    M --> UC6
+    M --> UC7
+    M --> UC8
+    M --> UC9
+    M --> UC10
+    M --> UC11
+    M --> UC12
+    M --> UC13
+    M --> UC14
+    M --> UC15
+    M --> UC16
+    M --> UC17
+    M --> UC18
+    M --> UC19
+    M --> UC20
+    M --> UC21
+    M --> UC22
+    M --> UC23
+    M --> UC24
+    M --> UC25
+    M --> UC26
+    M --> UC27
+    M --> UC28
+    M --> UC29
+
+    AD --> UC30
+    AD --> UC31
+
+    UC2 -.-> UC3
+    UC8 -.-> UC27

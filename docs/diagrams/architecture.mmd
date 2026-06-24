@@ -1,0 +1,12 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "16px", "primaryColor": "#ecfdf5", "primaryBorderColor": "#0d9488"}}}%%
+flowchart LR
+    U["使用者瀏覽器"] --> A["Apache + mod_wsgi"]
+    A --> D["Django Web App"]
+    D --> M[("MariaDB")]
+    D --> R[("Redis")]
+    R --> C["Celery Worker"]
+    C --> D
+    D --> AI["NVIDIA / Gemini API"]
+    D --> GO["Google OAuth"]
+    D --> API["DRF REST API"]
+    API --> SW["Swagger / ReDoc"]

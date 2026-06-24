@@ -1,0 +1,13 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "16px", "primaryColor": "#ecfdf5"}}}%%
+flowchart TD
+    A[登入會員進入首頁] --> B{無搜尋篩選且第1頁?}
+    B -- 否 --> Z[不顯示推薦區]
+    B -- 是 --> C[建立偏好檔案]
+    C --> D[收藏 按讚 發文 搜尋 追蹤 飲食偏好]
+    D --> E[篩選公開貼文候選]
+    E --> F[評分排序]
+    F --> G{不足3篇?}
+    G -- 是 --> H[熱門公開貼文補滿]
+    G -- 否 --> I[取 Top 3]
+    H --> I
+    I --> J[顯示今天吃什麼區塊]

@@ -1,0 +1,20 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "16px"}}}%%
+sequenceDiagram
+    autonumber
+    participant U as 會員
+    participant W as Django Web
+    participant Q as Celery Redis
+    participant AI as AI API
+    participant DB as MariaDB
+
+    U->>W: 提交新貼文
+    W->>DB: 儲存 Post
+    W->>Q: 排程健康分析任務
+    W-->>U: 立即回應頁面
+
+    Q->>AI: 分析圖文內容
+    AI-->>Q: 熱量 等級 短評
+    Q->>DB: 寫入 PostHealthInsight
+    U->>W: 重新整理動態牆
+    W->>DB: 讀取 latest_health_insight
+    W-->>U: 顯示健康達人氣泡
