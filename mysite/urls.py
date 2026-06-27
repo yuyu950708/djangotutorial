@@ -22,6 +22,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from mysite.admin_site import eatwhat_admin
 
 urlpatterns = [
+    path("i18n/", include("django.conf.urls.i18n")),
     path("admin/", eatwhat_admin.urls),
     path("captcha/", include("captcha.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

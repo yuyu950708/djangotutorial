@@ -42,3 +42,21 @@ class AuthTemplateTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "使用 Google 帳號繼續")
         self.assertContains(response, "/oauth/google/login/")
+
+
+class LanguageSwitcherTests(TestCase):
+    def test_nav_renders_language_switcher(self):
+        response = self.client.get(reverse("posts:feed"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="zh-hant"')
+        self.assertContains(response, 'value="en"')
+        self.assertContains(response, reverse("set_language"))
+
+    def test_set_language_switches_nav_to_english(self):
+        session = self.client.session
+        session["django_language"] = "en"
+        session.save()
+
+        response = self.client.get(reverse("posts:feed"))
+        self.assertContains(response, "Home")
+        self.assertContains(response, "Log in")

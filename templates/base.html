@@ -1,10 +1,10 @@
-{% load static %}
+{% load static i18n %}
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="{{ LANGUAGE_CODE|default:'zh-hant' }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>{% block title %}等等吃啥{% endblock %}</title>
+  <title>{% block title %}{% trans "等等吃啥" %}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -323,17 +323,18 @@
       <div class="flex min-h-14 items-center justify-between gap-2 py-2 sm:min-h-16 sm:py-3">
         <a class="flex shrink-0 items-center gap-2 text-xl font-bold tracking-tight text-brand-teal sm:text-2xl" href="{% url 'posts:feed' %}">
           <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-teal text-lg text-white shadow-saas">🍽</span>
-          <span>等等吃啥</span>
+          <span>{% trans "等等吃啥" %}</span>
         </a>
 
         {# 桌面版導覽 #}
         <div class="hidden items-center gap-1 md:flex md:gap-2">
-          <a class="saas-nav-link" href="{% url 'posts:feed' %}">首頁</a>
+          {% include "partials/language_switcher.html" %}
+          <a class="saas-nav-link" href="{% url 'posts:feed' %}">{% trans "首頁" %}</a>
           {% if user.is_authenticated %}
-            <a class="saas-nav-link" href="{% url 'posts:collections_list' %}">我的收藏</a>
-            <a class="saas-nav-link relative inline-flex items-center gap-1" href="{% url 'posts:notifications_list' %}" title="通知中心">
+            <a class="saas-nav-link" href="{% url 'posts:collections_list' %}">{% trans "我的收藏" %}</a>
+            <a class="saas-nav-link relative inline-flex items-center gap-1" href="{% url 'posts:notifications_list' %}" title="{% trans '通知中心' %}">
               <i class="fa-solid fa-bell" aria-hidden="true"></i>
-              <span>通知中心</span>
+              <span>{% trans "通知中心" %}</span>
               {% if unread_notifications_count %}
                 <span class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">{{ unread_notifications_count }}</span>
               {% endif %}
@@ -341,11 +342,11 @@
             <a class="saas-nav-link max-w-[10rem] truncate" href="{% url 'accounts:profile_detail' user.username %}" title="{{ user.username }}">{{ user.username }}</a>
             <form method="post" action="{% url 'accounts:logout' %}" class="m-0 inline">
               {% csrf_token %}
-              <button type="submit" class="saas-btn-ghost cursor-pointer text-sm">登出</button>
+              <button type="submit" class="saas-btn-ghost cursor-pointer text-sm">{% trans "登出" %}</button>
             </form>
           {% else %}
-            <a class="saas-nav-link" href="{% url 'accounts:login' %}">登入</a>
-            <a class="saas-btn-primary text-sm" href="{% url 'accounts:register' %}">註冊</a>
+            <a class="saas-nav-link" href="{% url 'accounts:login' %}">{% trans "登入" %}</a>
+            <a class="saas-btn-primary text-sm" href="{% url 'accounts:register' %}">{% trans "註冊" %}</a>
           {% endif %}
         </div>
 
@@ -356,7 +357,7 @@
           @click="open = !open"
           :aria-expanded="open"
           aria-controls="mobile-nav"
-          aria-label="開啟選單"
+          aria-label="{% trans '開啟選單' %}"
         >
           <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -379,24 +380,25 @@
         x-transition:leave-end="opacity-0 -translate-y-1"
       >
         <div class="flex flex-col gap-1 pb-2">
-          <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'posts:feed' %}" @click="open = false">首頁</a>
+          <div class="px-4 py-2">{% include "partials/language_switcher.html" %}</div>
+          <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'posts:feed' %}" @click="open = false">{% trans "首頁" %}</a>
           {% if user.is_authenticated %}
-            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'posts:collections_list' %}" @click="open = false">我的收藏</a>
+            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'posts:collections_list' %}" @click="open = false">{% trans "我的收藏" %}</a>
             <a class="saas-nav-link flex min-h-11 items-center justify-between px-4 py-3" href="{% url 'posts:notifications_list' %}" @click="open = false">
-              <span class="inline-flex items-center gap-2"><i class="fa-solid fa-bell" aria-hidden="true"></i>通知中心</span>
+              <span class="inline-flex items-center gap-2"><i class="fa-solid fa-bell" aria-hidden="true"></i>{% trans "通知中心" %}</span>
               {% if unread_notifications_count %}
                 <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">{{ unread_notifications_count }}</span>
               {% endif %}
             </a>
-            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'accounts:profile_detail' user.username %}" @click="open = false">個人頁面</a>
-            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'accounts:profile_edit' %}" @click="open = false">編輯檔案</a>
+            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'accounts:profile_detail' user.username %}" @click="open = false">{% trans "個人頁面" %}</a>
+            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'accounts:profile_edit' %}" @click="open = false">{% trans "編輯檔案" %}</a>
             <form method="post" action="{% url 'accounts:logout' %}" class="m-0 w-full px-4 py-2" @submit="open = false">
               {% csrf_token %}
-              <button type="submit" class="saas-btn-ghost w-full cursor-pointer">登出</button>
+              <button type="submit" class="saas-btn-ghost w-full cursor-pointer">{% trans "登出" %}</button>
             </form>
           {% else %}
-            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'accounts:login' %}" @click="open = false">登入</a>
-            <a class="saas-btn-primary mx-4 block text-center" href="{% url 'accounts:register' %}" @click="open = false">註冊</a>
+            <a class="saas-nav-link block min-h-11 px-4 py-3" href="{% url 'accounts:login' %}" @click="open = false">{% trans "登入" %}</a>
+            <a class="saas-btn-primary mx-4 block text-center" href="{% url 'accounts:register' %}" @click="open = false">{% trans "註冊" %}</a>
           {% endif %}
         </div>
       </div>

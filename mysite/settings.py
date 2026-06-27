@@ -142,6 +142,7 @@ TIME_ZONE = 'Asia/Taipei'
 
 LANGUAGES = [
     ('zh-hant', '繁體中文'),
+    ('en', 'English'),
 ]
 
 LOCALE_PATHS = [BASE_DIR / "locale"]

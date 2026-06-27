@@ -1,0 +1,65 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: EatWhat\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "首頁"
+msgstr "Home"
+
+msgid "我的收藏"
+msgstr "My Collections"
+
+msgid "通知中心"
+msgstr "Notifications"
+
+msgid "登出"
+msgstr "Log out"
+
+msgid "登入"
+msgstr "Log in"
+
+msgid "註冊"
+msgstr "Sign up"
+
+msgid "個人頁面"
+msgstr "Profile"
+
+msgid "編輯檔案"
+msgstr "Edit profile"
+
+msgid "開啟選單"
+msgstr "Open menu"
+
+msgid "等等吃啥"
+msgstr "EatWhat"
+
+msgid "今天吃什麼？"
+msgstr "What's for today?"
+
+msgid "為你推薦的 3 個美食靈感"
+msgstr "Top 3 meal picks for you"
+
+msgid "根據你的收藏、按讚、搜尋、追蹤與飲食偏好排序。"
+msgstr "Ranked by your collections, likes, searches, follows, and dietary preferences."
+
+msgid "個人化推薦"
+msgstr "Personalized"
+
+msgid "開啟 AI 美食助理"
+msgstr "Open AI food assistant"
+
+msgid "嗨，我是等等吃啥的美食助理。可以問我聚餐、口味、預算，或上傳食物照片一起討論。"
+msgstr "Hi! I'm the EatWhat food assistant. Ask about meals, flavors, budget, or upload a food photo."
+
+msgid "請先登入後再使用 AI 助理。"
+msgstr "Please log in to use the AI assistant."
+
+msgid "今天吃什麼？"
+msgstr "What should I eat today?"
+
+msgid "等等吃啥？"
+msgstr "Eat what?"

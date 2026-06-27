@@ -2,7 +2,7 @@
 
 美食社群平台：發文、互動、搜尋靈感，並整合 **AI 美食助理**、**健康達人模式**、**個人化推薦**、**通知中心**、**Google OAuth** 與 **RESTful API（Swagger）**。
 
-- **GitHub（繳交用）**：<https://github.com/11146076/djangotutorial>（`main` 分支）
+- **GitHub（繳交用）**：<https://github.com/11146076/djangotutorial>（`main` 或整合分支 `development`）
 - **本機開發**：WSL Ubuntu + Apache + MariaDB，或 `runserver` 快速開發
 
 ---
@@ -21,6 +21,7 @@
 | AI 助理 | 美食對話助手（文字/圖片），浮動視窗 | ✅ |
 | 健康達人 | AI 健康分析 + 動態牆/詳情頁對話框顯示 | ✅ |
 | REST API | DRF ViewSets + OpenAPI（Swagger / ReDoc） | ✅ |
+| 多國語言 | 導覽列繁中 / English 切換（Django i18n） | ✅ |
 | 後台管理 | 會員/貼文/留言/分類/標籤、CSV 匯出、重算讚數 | ✅ |
 
 ---
